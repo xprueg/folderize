@@ -9,13 +9,13 @@ import calendar
 import shutil
 
 def main():
-    # Make sure months will always be in the same language
-    locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
-
     parser = argparse.ArgumentParser(description="Sort files into folders by creation date")
     parser.add_argument("-i", "--input", required=True, action="append", help="The source folder(s)")
     parser.add_argument("-o", "--output", required=True, help="The destination folder")
+    parser.add_argument("-l", "--locale", required=False, help="The locale to be used for folder creation", default="en_US")
     args = parser.parse_args()
+
+    locale.setlocale(locale.LC_TIME, "{locale}.UTF-8".format(locale=args.locale))
 
     for input in args.input:
         Folderize(input, args.output)
