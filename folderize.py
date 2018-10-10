@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 import filecmp
 import datetime
 import pathlib
@@ -11,17 +12,23 @@ def main():
     # Make sure months will always be in the same language
     locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
-    if len(sys.argv) < 2:
-        print("Error: No path argument specified!", file=sys.stderr)
-    else:
-        root = sys.argv[1]
-        Folderize(root)
+    parser = argparse.ArgumentParser(description="Sort files into folders by creation date")
+    parser.add_argument("-i", "--input", required=True, action="append", help="The source folder(s)")
+    parser.add_argument("-o", "--output", required=True, help="The destination folder")
+    args = parser.parse_args()
+
+    for input in args.input:
+        Folderize(input, args.output)
 
 class Folderize:
-    def __init__(self, root):
+    def __init__(self, root, output):
         self.root = root
         if not os.path.isdir(root):
-            raise ValueError("Error: The argument `{argv}' is not a valid directory".format(argv=root))
+            raise ValueError("-i: `{argv}' is not a valid directory".format(argv=root))
+
+        self.output = output
+        if not os.path.isdir(output):
+            raise ValueError("-o: `{argv}' is not a valid directory".format(argv=output))
 
         self.filecount = self.get_file_count(self.root)
         self.current_index = 0
@@ -40,10 +47,12 @@ class Folderize:
 
     def update_progressbar(self, file):
         self.current_index += 1
-        print("\rCopied {i} of {filecount} files @ {progress} %".format(
+        print("\r{progress:3}% {i}/{filecount} [{root} -> {output}]".format(
+            progress=int(100 / self.filecount * (self.current_index)),
             i=self.current_index,
             filecount=self.filecount,
-            progress=int(100 / self.filecount * (self.current_index))
+            root=self.root,
+            output=self.output
         ), end="" if (self.current_index < self.filecount) else "\n")
 
     def maybe_copy(self, src):
@@ -89,7 +98,7 @@ class Folderize:
     def get_dst_folder(self, file):
         cdate = datetime.datetime.fromtimestamp(os.path.getmtime(file))
         return os.path.join(
-            self.root,
+            self.output,
             str(cdate.year),
             calendar.month_name[cdate.month],
             str(cdate.day)
