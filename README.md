@@ -1,5 +1,5 @@
 # folderize
-Sort files into folders by creation date.
+Copy files, from multiple sources, into a single folder sorted by creation date while preventing duplicate content.
 
 ### Synopsis
 `folderize.py -i input_folder [-i input_folder]... -o output_folder [-l locale]`
