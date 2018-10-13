@@ -17,11 +17,50 @@ def main():
 
     locale.setlocale(locale.LC_TIME, "{locale}.UTF-8".format(locale=args.locale))
 
+    lookup = BuildFileLookup(args.output)
+
     for input in args.input:
-        Folderize(input, args.output)
+        Folderize(input, args.output, lookup)
+
+def BuildFileLookup(path):
+    lookup = dict()
+
+    filecount = GetFileCount(path)
+    current_index = 0
+    for root, _, files in os.walk(path):
+        for file in files:
+            if not file.startswith("."):
+                ProgressBar.Log("Building file lookup", current_index, filecount)
+                current_index += 1
+
+                fileobj = File(os.path.join(root, file))
+                if fileobj not in lookup:
+                    lookup[fileobj] = fileobj
+
+    return lookup
+
+class File:
+    def __init__(self, path):
+        self.path = path
+        self.hashed_filecontent = File.CreateFilecontentHash(self.path)
+
+    @staticmethod
+    def CreateFilecontentHash(path):
+        return hash(File.Read(path))
+
+    @staticmethod
+    def Read(path):
+        with open(path, mode="rb") as file:
+            return file.read()
+
+    def __hash__(self):
+        return self.hashed_filecontent
+
+    def __eq__(self, other):
+        return filecmp.cmp(self.path, other.path)
 
 class Folderize:
-    def __init__(self, root, output):
+    def __init__(self, root, output, lookup):
         self.root = root
         if not os.path.isdir(root):
             raise ValueError("-i: `{argv}' is not a valid directory".format(argv=root))
@@ -30,12 +69,14 @@ class Folderize:
         if not os.path.isdir(output):
             raise ValueError("-o: `{argv}' is not a valid directory".format(argv=output))
 
-        self.filecount = self.get_file_count(self.root)
+        self.lookup = lookup
+        self.filecount = GetFileCount(self.root)
         self.current_index = 0
+        self.progressbar_length = 10
 
-        self.iterate_files(self.root, self.maybe_copy, self.update_progressbar)
+        self.IterateFiles(self.root, self.MaybeCopy, self.UpdateProgressbar)
 
-    def iterate_files(self, path, func, callback=None):
+    def IterateFiles(self, path, func, callback=None):
         with os.scandir(path) as it:
             for file in it:
                 if not file.name.startswith(".") and file.is_file():
@@ -45,57 +86,49 @@ class Folderize:
                     if func(file.path):
                         return True
 
-    def update_progressbar(self, file):
+    def UpdateProgressbar(self, file):
+        ProgressBar.Log(
+            "{root} -> {output}".format(root=self.root, output=self.output),
+            self.current_index,
+            self.filecount
+        )
         self.current_index += 1
-        print("\r{progress:3}% {i}/{filecount} [{root} -> {output}]".format(
-            progress=int(100 / self.filecount * (self.current_index)),
-            i=self.current_index,
-            filecount=self.filecount,
-            root=self.root,
-            output=self.output
-        ), end="" if (self.current_index < self.filecount) else "\n")
 
-    def maybe_copy(self, src):
+    def MaybeCopy(self, src):
+        fileobj = File(src)
+
+        # Another file with same contents exists
+        if fileobj in self.lookup:
+            return
+
+        # No other file with the same contents exists
+        self.lookup[fileobj] = fileobj
+
         src_base = os.path.basename(src)
         src_splitname = os.path.splitext(src_base)
-        dst_folder = self.get_dst_folder(src)
+        dst_folder = self.GetDstFolder(src)
         dst = os.path.join(dst_folder, src_base)
 
         tmp_file_i = 0
 
         while True:
-            # Filename exists
-            if os.path.isfile(dst):
-
-                # Same name, same contents
-                if filecmp.cmp(src, dst):
-                    break
-
-                # Same name, different contents
-                else:
-                    tmp_filename = "{name}_{i}{ext}".format(
-                        name=src_splitname[0],
-                        i=tmp_file_i,
-                        ext=src_splitname[1]
-                    )
-                    dst = os.path.join(dst_folder, tmp_filename)
-                    tmp_file_i += 1
-
-            # File with different name has same contents (within target folder)
-            elif os.path.isdir(dst_folder) and self.iterate_files(dst_folder, lambda file: filecmp.cmp(src, file)):
-                break
-
-            # Filename nor contents match, create it
-            else:
+            # Filename does not exists
+            if not os.path.isfile(dst):
                 pathlib.Path(dst_folder).mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
                 break
 
-    def get_file_count(self, path):
-        with os.scandir(path) as it:
-            return len([x for x in it if not x.name.startswith(".") and x.is_file()])
+            # Filename exists already, find new name
+            else:
+                tmp_filename = "{name}_{i}{ext}".format(
+                    name=src_splitname[0],
+                    i=tmp_file_i,
+                    ext=src_splitname[1]
+                )
+                dst = os.path.join(dst_folder, tmp_filename)
+                tmp_file_i += 1
 
-    def get_dst_folder(self, file):
+    def GetDstFolder(self, file):
         cdate = datetime.datetime.fromtimestamp(os.path.getmtime(file))
         return os.path.join(
             self.output,
@@ -103,6 +136,36 @@ class Folderize:
             calendar.month_name[cdate.month],
             str(cdate.day)
         )
+
+class ProgressBar:
+    length = 20
+    char_loaded = "@"
+    char_unloaded = "."
+
+    @staticmethod
+    def Log(info, index, total):
+        if index == 0:
+            print(info)
+
+        index += 1
+        current_progress = int(100 / total * index)
+        current_progressbar_length = int(ProgressBar.length / total * index)
+        print("\r  {progress:3}% [{loaded}{unloaded}] {i} of {total}".format(
+            progress=current_progress,
+            loaded=ProgressBar.char_loaded * current_progressbar_length,
+            unloaded=ProgressBar.char_unloaded * (ProgressBar.length - current_progressbar_length),
+            i=index,
+            total=total
+        ), end="" if (index < total) else "\n\n")
+
+def GetFileCount(path):
+    filecount = 0
+    for _, _, files in os.walk(path):
+        for file in files:
+            if not file.startswith("."):
+                filecount += 1
+
+    return filecount
 
 if __name__ == "__main__":
     main()
