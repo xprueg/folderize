@@ -79,14 +79,16 @@ class Folderize:
     def IterateFiles(self, path, func, callback=None):
         with os.scandir(path) as it:
             for file in it:
-                if not file.name.startswith(".") and file.is_file():
+                if file.is_dir():
+                    self.IterateFiles(file.path, func, callback)
+                elif not file.name.startswith(".") and file.is_file():
                     if callback is not None:
                         callback(file.path)
 
                     if func(file.path):
                         return True
 
-    def UpdateProgressbar(self, file):
+    def UpdateProgressbar(self, file_path):
         ProgressBar.Log(
             "{root} -> {output}".format(root=self.root, output=self.output),
             self.current_index,
