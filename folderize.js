@@ -2,7 +2,6 @@
 
 const fs = require("fs");
 const path = require("path");
-const readline = require("readline");
 const { create_file_hash, create_file_hash_sync } = require("./hash_util.js");
 const date_util = require("./date_util.js");
 const { log, constants: log_constants } = require("./console_util.js");
