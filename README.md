@@ -1,10 +1,12 @@
 # folderize
-Copy files, from multiple sources, into a single folder sorted by creation date while preventing duplicate content.
+Copy files into a folder sorted by creation date while preventing duplicate content.
 
 ### Synopsis
-`folderize.py -i input_folder [-i input_folder]... -o output_folder [-l locale]`
+`node folderize.js ./in ./out`
 
-### Description
-- ```-i, --input``` The source folder(s).
-- ```-o, --output``` The destination folder.
-- ```-l, --locale``` The locale to be used for folder creation.
+### Todo
+- [ ] Properly parse arguments…
+  - [ ] to handle multiple inputs.
+  - [ ] to allow for extra options:
+    - [ ] Disable complete indexing of the output path.
+    - [ ] Set locale for folder creation.
