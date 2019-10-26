@@ -6,6 +6,7 @@ const { create_file_hash, create_file_hash_sync } = require("./hash_util.js");
 const date_util = require("./date_util.js");
 const { log, constants: log_constants } = require("./console_util.js");
 const fs_util = require("./fs_util.js");
+const progress_util = require("./progress_util.js");
 
 const src = process.argv[2];
 const dst = process.argv[3];
@@ -22,10 +23,7 @@ class FileLookup {
     log("[b]Creating file lookup[/b]", log_constants.LEADING_SPACE);
 
     this.folder_stats = fs_util.get_folder_stats(root);
-    this.progress_steps = 10;
-    this.progress_step = this.folder_stats.files / this.progress_steps;
-    this.current_progress_step = 0;
-    this.file_progress = 0;
+    this.progress = new progress_util(this.folder_stats, "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)");
 
     log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
@@ -50,7 +48,7 @@ class FileLookup {
 
         create_file_hash(path.join(root, dirent.name), hash => {
           this.add_hash(hash);
-          this.log_progress();
+          this.progress.step();
 
           if (this.index.length === this.folder_stats.files) {
             emit_init(this);
@@ -58,17 +56,6 @@ class FileLookup {
         });
       });
     });
-  }
-
-  log_progress() {
-    this.file_progress++;
-
-    const progress = Math.floor(100 / this.folder_stats.files * this.file_progress);
-
-    if (this.file_progress - this.current_progress_step > this.progress_step || progress === 100) {
-      log(`Indexed ${progress}% (${this.file_progress}/${this.folder_stats.files})`);
-      this.current_progress_step += this.progress_step;
-    }
   }
 
   add_hash(hash) {
@@ -96,10 +83,7 @@ class FileCopy {
       log("[b]Copying files[/b]", log_constants.LEADING_SPACE);
 
       this.folder_stats = fs_util.get_folder_stats(src);
-      this.progress_steps = 10;
-      this.progress_step = this.folder_stats.files / this.progress_steps;
-      this.current_progress_step = 0;
-      this.file_progress = 0;
+      this.progress = new progress_util(this.folder_stats, "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__");
 
       log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
@@ -116,7 +100,7 @@ class FileCopy {
         const filehash = create_file_hash_sync(filepath);
 
         if (this.dst_file_lookup.contains(filehash)) {
-          this.log_progress();
+          this.progress.step({ SKIPPED: +1 });
           return;
         }
 
@@ -142,20 +126,8 @@ class FileCopy {
         fs.utimesSync(dst_file, lstat.atime, lstat.mtime);
 
         this.dst_file_lookup.add_hash(filehash);
-
-        this.log_progress();
+        this.progress.step();
       });
-  }
-
-  log_progress() {
-    this.file_progress++;
-
-    const progress = Math.floor(100 / this.folder_stats.files * this.file_progress);
-
-    if (this.file_progress - this.current_progress_step > this.progress_step || progress === 100) {
-      log(`Copied ${progress}% (${this.file_progress}/${this.folder_stats.files})`);
-      this.current_progress_step += this.progress_step;
-    }
   }
 }
 
