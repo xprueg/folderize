@@ -2,14 +2,12 @@
 
 const fs = require("fs");
 const path = require("path");
+const argv_util = require("./argv_util.js");
 const { create_file_hash, create_file_hash_sync } = require("./hash_util.js");
 const date_util = require("./date_util.js");
 const { log, constants: log_constants } = require("./console_util.js");
 const fs_util = require("./fs_util.js");
 const progress_util = require("./progress_util.js");
-
-const src = process.argv[2];
-const dst = process.argv[3];
 
 class FileLookup {
   constructor(root, emit_init) {
@@ -70,24 +68,27 @@ class FileLookup {
 }
 
 class FileCopy {
-  constructor(src, dst) {
-    log(`← \`${src}'\n→ \`${dst}'.`, log_constants.LEADING_SPACE);
-
-    this.src = src;
-    this.dst = dst;
+  constructor(argv_util) {
+    this.src = argv_util.get_value("--input");
+    this.dst = argv_util.get_value("--output");
     this.dst_file_lookup;
 
-    new FileLookup(dst, file_lookup => {
+    log(`← \`${this.src}'\n→ \`${this.dst}'.`, log_constants.LEADING_SPACE);
+
+    new FileLookup(this.dst, file_lookup => {
       this.dst_file_lookup = file_lookup;
 
       log("[b]Copying files[/b]", log_constants.LEADING_SPACE);
 
-      this.folder_stats = fs_util.get_folder_stats(src);
-      this.progress = new progress_util(this.folder_stats, "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__");
+      this.folder_stats = fs_util.get_folder_stats(this.src);
+      this.progress = new progress_util(
+        this.folder_stats,
+        "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__"
+      );
 
       log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
-      this.copy_folder(src);
+      this.copy_folder(this.src);
     });
   }
 
@@ -131,4 +132,8 @@ class FileCopy {
   }
 }
 
-new FileCopy(src, dst);
+const argvu = new argv_util(process.argv);
+argvu.register("--input", "-i", { expected_values: 1, required: true });
+argvu.register("--output", "-o", { expected_values: 1, required: true });
+
+new FileCopy(argvu);
