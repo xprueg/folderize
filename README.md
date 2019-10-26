@@ -2,7 +2,15 @@
 Copy files into a folder sorted by creation date while preventing duplicate content.
 
 ### Synopsis
-`node folderize.js ./in ./out`
+`node folderize.js --input ./in --output ./out`
+
+### Description
+|Argument|Description|
+|--------|-----------|
+|`-i`, `--input`|The source folder|
+|`-o`, `--output`|The output folder|
+
+---
 
 ### Todo
 - [x] Properly parse arguments…
