@@ -2,7 +2,7 @@
 Copy files from multiple sources into a single folder sorted by creation date while preventing duplicate content.
 
 ### Synopsis
-`node folderize.js --input ./in [--input ./in, …] --output ./out [--locale en-US]`
+`node folderize.js --input ./in [--input ./in, …] --output ./out [--locale en-US] [--noindex]`
 
 ### Description
 <table>
@@ -48,12 +48,17 @@ Copy files from multiple sources into a single folder sorted by creation date wh
         </table>
       </td>
     </tr>
+    <tr>
+      <td><code>--noindex</code></td>
+      <td>Prevent indexing of the complete destination folder. Useful to speed up execution if you only need to add few files.<br/>:warning: This will not check if files already exist in destination folder.</td>
+    </tr>
   </tbody>
 </table>
 
 ---
 
 ### Todo
+- [ ] Prevent duplicates with `--noindex`
 - [x] Properly parse arguments…
   - [x] to handle multiple inputs.
   - [ ] to allow for extra options:

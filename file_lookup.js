@@ -11,10 +11,10 @@ const util = {
 };
 
 module.exports = exports = class FileLookup {
-  constructor(root, emit_init) {
+  constructor(root, emit_init, index_dst_completely) {
     this.index = [];
 
-    if (!fs.existsSync(root)) {
+    if (!fs.existsSync(root) || !index_dst_completely) {
       emit_init(this);
       return;
     }
@@ -24,7 +24,7 @@ module.exports = exports = class FileLookup {
     this.folder_stats = util.fs.get_folder_stats(root);
     this.progress = new util.progress(this.folder_stats, "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)");
 
-    util.console.log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
+    util.console.log(`Found [u]${this.folder_stats.files} file(s)[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
     this.index_files(root, emit_init);
   }

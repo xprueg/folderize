@@ -16,6 +16,7 @@ module.exports = exports = class FileCopy {
   constructor(argv_util) {
     this.src = argv_util.get_value("--input");
     this.dst = argv_util.get_value("--output");
+    this.index_dst_completely = !argv_util.is_set("--noindex");
     this.date_util = util.date(argv_util.get_value("--locale"));
     this.dst_file_lookup;
 
@@ -34,14 +35,14 @@ module.exports = exports = class FileCopy {
         this.folder_stats = util.fs.get_folder_stats(src);
         this.progress = new util.progress(
           this.folder_stats,
-          "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__"
+          "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ file(s):FI__"
         );
 
-        util.console.log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
+        util.console.log(`Found [u]${this.folder_stats.files} file(s)[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
         this.copy_folder(src);
       });
-    });
+    }, this.index_dst_completely);
   }
 
   copy_folder(root) {

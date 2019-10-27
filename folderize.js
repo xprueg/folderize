@@ -6,5 +6,6 @@ const file_copy = require("./file_copy.js");
 argv_util.register("--input", "-i", { expected_values: 1, multiple: true, required: true });
 argv_util.register("--output", "-o", { expected_values: 1, required: true });
 argv_util.register("--locale", "-l", { expected_values: 1, default: "en-US" });
+argv_util.register("--noindex");
 
 new file_copy(argv_util);
