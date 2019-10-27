@@ -24,41 +24,55 @@ class ArgvUtil {
   }
 
   parse_argv(arg, keys) {
-    let cli_pos = keys.map(k => this.argv.indexOf(k)).filter(f => f !== -1);
-
-    switch(cli_pos.length) {
-      case 0:
-        if (arg.required) {
-          throw new Error(`Missing required argument \`${keys.join(", ")}'.`);
-        }
-        break;
-
-      case 1: {
-        cli_pos = Number(cli_pos.shift());
-        arg.is_set = true;
-
-        for (let i = 0; i < arg.expected_values; ++i) {
-          let next_cli_arg = this.argv[++cli_pos];
-
-          if (!next_cli_arg) {
-            throw new Error(`Too few arguments, \`${keys.join(", ")}' expects ${arg.expected_values} argument(s).`);
-          }
-
-          if (arg.expected_values === 1) {
-            arg.value = next_cli_arg;
-          } else {
-            if (!arg.value) {
-                arg.value = [];
-            }
-
-            arg.value.push(next_cli_arg);
-          }
-        }
-      } break;
-
-      default:
-        throw new Error(`Same argument found multiple times: \`${keys.join(", ")}'.`);
+    let cli_positions = [];
+    for (let [cli_pos, cli_arg] of this.argv.entries()) {
+      if (keys.includes(cli_arg)) {
+        cli_positions.push(cli_pos);
+      }
     }
+
+    if (cli_positions.length === 0) {
+      if (arg.required) {
+        throw new Error(`Missing required argument \`${keys.join(", ")}'.`);
+      }
+    } else {
+      if (cli_positions.length >= 2) {
+        if (!arg.multiple) {
+          throw new Error(`Same argument found multiple times: \`${keys.join(", ")}'.`);
+        }
+      }
+
+      arg.is_set = true;
+      arg.value = this.extract_arg_value(cli_positions, arg.expected_values, arg.multiple);
+    }
+  }
+
+  extract_arg_value(cli_positions, expected_values, multiple) {
+    let value;
+
+    if (expected_values > 1 || multiple) {
+      value = [];
+    }
+
+    for (const cli_position of cli_positions) {
+      let cli_pos = cli_position;
+
+      for (let i = 0; i < expected_values; ++i) {
+        let next_cli_arg = this.argv[++cli_pos];
+
+        if (!next_cli_arg) {
+          throw new Error(`Too few arguments, \`${this.argv[cli_position]}' expects ${expected_values} argument(s).`);
+        }
+
+        if (expected_values === 1 && !multiple) {
+          value = next_cli_arg;
+        } else {
+          value.push(next_cli_arg);
+        }
+      }
+    }
+
+    return value;
   }
 
   is_set(arg) {
@@ -66,7 +80,9 @@ class ArgvUtil {
   }
 
   get_value(arg) {
-    if (this.args[arg].value) {
+    if (!this.args[arg]) {
+      throw new Error(`Unkown argument \`${arg}'.`);
+    } else if (this.args[arg].value) {
       return this.args[arg].value;
     } else if (this.args[arg].default) {
       return this.args[arg].default;
@@ -82,6 +98,7 @@ class ArgvUtil {
 
 ArgvUtil.default_arg = {
   expected_values: 0,
+  multiple: false,
   value: undefined,
 
   required: false,

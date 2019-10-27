@@ -19,22 +19,28 @@ module.exports = exports = class FileCopy {
     this.date_util = util.date(argv_util.get_value("--locale"));
     this.dst_file_lookup;
 
-    util.console.log(`← \`${this.src}'\n→ \`${this.dst}'.`, util.console.constants.LEADING_SPACE);
+    util.console.log(
+      `${this.src.map(s => `← \`${s}'`).join("\n")}\n→ \`${this.dst}'.`,
+      util.console.constants.LEADING_SPACE
+    );
 
     new file_lookup(this.dst, file_lookup => {
       this.dst_file_lookup = file_lookup;
 
-      util.console.log("[b]Copying files[/b]", util.console.constants.LEADING_SPACE);
+      this.src.forEach(src => {
+        util.console.log("[b]Copying files[/b]", util.console.constants.LEADING_SPACE);
+        util.console.log(`← ${src}`);
 
-      this.folder_stats = util.fs.get_folder_stats(this.src);
-      this.progress = new util.progress(
-        this.folder_stats,
-        "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__"
-      );
+        this.folder_stats = util.fs.get_folder_stats(src);
+        this.progress = new util.progress(
+          this.folder_stats,
+          "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)__IF:SKIPPED=, Skipped __SKIPPED__ files:FI__"
+        );
 
-      util.console.log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
+        util.console.log(`Found [u]${this.folder_stats.files} files[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
 
-      this.copy_folder(this.src);
+        this.copy_folder(src);
+      });
     });
   }
 

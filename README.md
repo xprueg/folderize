@@ -1,8 +1,8 @@
 # folderize
-Copy files into a folder sorted by creation date while preventing duplicate content.
+Copy files from multiple sources into a single folder sorted by creation date while preventing duplicate content.
 
 ### Synopsis
-`node folderize.js --input ./in --output ./out [--locale en-US]`
+`node folderize.js --input ./in [--input ./in, …] --output ./out [--locale en-US]`
 
 ### Description
 <table>
@@ -14,8 +14,8 @@ Copy files into a folder sorted by creation date while preventing duplicate cont
   </thead>
   <tbody>
     <tr>
-      <td><code>-i</code>, <code>--&nbsp;input</code></td>
-      <td>The source folder</td>
+      <td><code>-i</code>, <code>--input</code></td>
+      <td>The source folder(s)</td>
     </tr>
     <tr>
       <td><code>-o</code>, <code>--output</code></td>
@@ -55,7 +55,7 @@ Copy files into a folder sorted by creation date while preventing duplicate cont
 
 ### Todo
 - [x] Properly parse arguments…
-  - [ ] to handle multiple inputs.
+  - [x] to handle multiple inputs.
   - [ ] to allow for extra options:
     - [ ] Disable complete indexing of the output path.
     - [x] Set locale for folder creation.
