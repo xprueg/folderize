@@ -50,7 +50,7 @@ Copy files from multiple sources into a single folder sorted by creation date wh
     </tr>
     <tr>
       <td><code>--noindex</code></td>
-      <td>Prevent indexing of the complete destination folder. Useful to speed up execution if you only need to add few files.<br/>:warning: This will not check if files already exist in destination folder.</td>
+      <td>Prevents indexing of the complete destination folder, folders are indexed when needed. Useful to speed up execution if you only need to add a few files.</td>
     </tr>
   </tbody>
 </table>
@@ -58,9 +58,9 @@ Copy files from multiple sources into a single folder sorted by creation date wh
 ---
 
 ### Todo
-- [ ] Prevent duplicates with `--noindex`
+- [x] Prevent duplicates with `--noindex`
 - [x] Properly parse arguments…
   - [x] to handle multiple inputs.
-  - [ ] to allow for extra options:
-    - [ ] Disable complete indexing of the output path.
+  - [x] to allow for extra options:
+    - [x] Disable complete indexing of the output path.
     - [x] Set locale for folder creation.

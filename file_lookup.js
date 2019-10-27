@@ -29,6 +29,26 @@ module.exports = exports = class FileLookup {
     this.index_files(root, emit_init);
   }
 
+  index_dir(root) {
+    if (!fs.existsSync(root)) {
+      return;
+    }
+
+    fs.readdirSync(root, { withFileTypes: true })
+      .forEach(dirent => {
+        if (dirent.name[0] == ".") {
+          return;
+        }
+
+        if (dirent.isDirectory()) {
+          this.index_dir(path.join(root, dirent.name));
+          return;
+        }
+
+        this.add_hash(util.create_hash.sync(path.join(root, dirent.name)));
+      });
+  }
+
   index_files(root, emit_init) {
     fs.readdir(root, { withFileTypes: true }, (err, files) => {
       if (err) {
@@ -49,7 +69,7 @@ module.exports = exports = class FileLookup {
           this.add_hash(hash);
           this.progress.step();
 
-          if (this.index.length === this.folder_stats.files) {
+          if (this.progress.is_complete()) {
             emit_init(this);
           }
         });

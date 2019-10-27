@@ -53,15 +53,19 @@ module.exports = exports = class FileCopy {
         const filepath = path.join(root, file.name);
         const filehash = util.create_hash.sync(filepath);
 
-        if (this.dst_file_lookup.contains(filehash)) {
-          this.progress.step({ SKIPPED: +1 });
-          return;
-        }
-
         const lstat = fs.lstatSync(filepath);
         const ldate = this.date_util.extract(lstat.mtime);
         const dst_folder = path.join(this.dst, ldate.year, ldate.month, ldate.day);
         let dst_file = path.join(dst_folder, file.name);
+
+        if (!this.index_dst_completely) {
+          this.dst_file_lookup.index_dir(dst_folder);
+        }
+
+        if (this.dst_file_lookup.contains(filehash)) {
+          this.progress.step({ SKIPPED: +1 });
+          return;
+        }
 
         if (!fs.existsSync(dst_folder)) {
           fs.mkdirSync(dst_folder, { recursive: true });
