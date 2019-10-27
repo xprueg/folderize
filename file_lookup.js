@@ -12,6 +12,7 @@ const util = {
 
 module.exports = exports = class FileLookup {
   constructor(root, emit_init, index_dst_completely) {
+    this.indexed_dirs = [];
     this.index = [];
 
     if (!fs.existsSync(root) || !index_dst_completely) {
@@ -30,9 +31,11 @@ module.exports = exports = class FileLookup {
   }
 
   index_dir(root) {
-    if (!fs.existsSync(root)) {
+    if (!fs.existsSync(root) || this.indexed_dirs.includes(root)) {
       return;
     }
+
+    this.indexed_dirs.push(root);
 
     fs.readdirSync(root, { withFileTypes: true })
       .forEach(dirent => {
