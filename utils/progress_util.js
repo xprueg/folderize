@@ -69,6 +69,10 @@ module.exports = exports = class ProgressUtil {
       });
   }
 
+  is_complete() {
+    return this.vars["__PROGRESS__"] === 100 ? true : false;
+  }
+
   step(custom_vars = {}) {
     const current_count = this._update_var("CURRENTCOUNT", +1);
     const progress = this._set_var("PROGRESS", Math.floor(100 / this.folder_stats.files * current_count));
