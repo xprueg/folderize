@@ -11,11 +11,12 @@ const util = {
 };
 
 module.exports = exports = class FileLookup {
-  constructor(root, emit_init, index_dst_completely) {
+  constructor(root, emit_init, is_full_indexed) {
+    this.is_full_indexed = is_full_indexed;
     this.indexed_dirs = [];
     this.index = [];
 
-    if (!fs.existsSync(root) || !index_dst_completely) {
+    if (!fs.existsSync(root) || !is_full_indexed) {
       emit_init(this);
       return;
     }
