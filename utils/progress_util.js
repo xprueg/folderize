@@ -9,7 +9,7 @@ module.exports = exports = class ProgressUtil {
     this.folder_stats = folder_stats;
     this.step_msg = step_msg;
 
-    this.progress_steps = 20;
+    this.progress_steps = 10;
     this.progress_step = this.folder_stats.files / this.progress_steps;
     this.current_progress_step = 0;
 

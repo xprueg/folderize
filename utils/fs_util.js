@@ -3,28 +3,35 @@
 const fs = require("fs");
 const path = require("path");
 
-class fs_util {
+class FileSystemUtil {
   static get_folder_stats(root) {
     let stat = {
       dirs: 0,
       files: 0
     };
 
-    const files = fs.readdirSync(root, { withFileTypes: true })
-      .filter(dirent => dirent.name[0] !== ".")
-      .map(dirent => {
-        if (dirent.isDirectory()) {
-          stat.dirs++;
+    const files = FileSystemUtil.get_dirents(root);
+    for (let i = 0; i < files.length; ++i) {
+      const file = files[i];
 
-          const {dirs, files} = fs_util.get_folder_stats(path.join(root, dirent.name));
-          stat.files += files;
-          stat.dirs += dirs;
-        } else {
-          stat.files++;
-        }
-      });
+      if (file.isDirectory()) {
+        stat.dirs++;
+
+        const {dirs, files} = FileSystemUtil.get_folder_stats(path.join(root, file.name));
+        stat.files += files;
+        stat.dirs += dirs;
+      } else {
+        stat.files++;
+      }
+    }
 
     return stat;
+  }
+
+  static get_dirents(root) {
+    return fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter(dirent => dirent.name[0] !== ".");
   }
 
   static copy_file(src, dst, src_stat) {
@@ -42,4 +49,4 @@ class fs_util {
   }
 }
 
-module.exports = exports = fs_util;
+module.exports = exports = FileSystemUtil;

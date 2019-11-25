@@ -5,30 +5,44 @@ const path = require("path");
 
 const util = {
   create_hash: require("./utils/hash_util.js"),
-  console: require("./utils/console_util.js"),
-  fs: require("./utils/fs_util.js"),
-  progress: require("./utils/progress_util.js")
+      console: require("./utils/console_util.js"),
+           fs: require("./utils/fs_util.js"),
+     progress: require("./utils/progress_util.js")
 };
 
-module.exports = exports = class FileLookup {
-  constructor(root, emit_init, is_full_indexed) {
+class FileLookup {
+  constructor(root, is_full_indexed) {
     this.is_full_indexed = is_full_indexed;
     this.indexed_dirs = [];
     this.index = [];
+  }
 
-    if (!fs.existsSync(root) || !is_full_indexed) {
-      emit_init(this);
-      return;
-    }
+  static create(root, is_full_indexed) {
+    const lookup = new FileLookup(root, is_full_indexed);
 
-    util.console.log("[b]Creating file lookup[/b]", util.console.constants.LEADING_SPACE);
+    return new Promise((res, rej) => {
+      if (!fs.existsSync(root) || !is_full_indexed) {
+        return res(lookup);
+      }
 
-    this.folder_stats = util.fs.get_folder_stats(root);
-    this.progress = new util.progress(this.folder_stats, "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)");
+      util.console.log(
+        "[b]Creating file lookup[/b]",
+        util.console.constants.LEADING_SPACE
+      );
 
-    util.console.log(`Found [u]${this.folder_stats.files} file(s)[/u] in [u]${this.folder_stats.dirs} directories[/u].`);
+      lookup.folder_stats = util.fs.get_folder_stats(root);
+      lookup.progress = new util.progress(
+        lookup.folder_stats,
+        "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)"
+      );
 
-    this.index_files(root, emit_init);
+      util.console.log(
+        `Found [u]${lookup.folder_stats.files} file(s)[/u] in ` +
+        `[u]${lookup.folder_stats.dirs} directories[/u].`
+      );
+
+      lookup.index_files(root, res);
+    });
   }
 
   index_dir(root) {
@@ -36,24 +50,22 @@ module.exports = exports = class FileLookup {
       return;
     }
 
+    const files = util.fs.get_dirents(root);
+    for (let i = 0; i < files.length; ++i) {
+      const file = files[i];
+
+      if (file.isDirectory()) {
+        this.index_dir(path.join(root, file.name));
+        continue;
+      }
+
+      this.add_hash(util.create_hash.sync(path.join(root, file.name)));
+    }
+
     this.indexed_dirs.push(root);
-
-    fs.readdirSync(root, { withFileTypes: true })
-      .forEach(dirent => {
-        if (dirent.name[0] == ".") {
-          return;
-        }
-
-        if (dirent.isDirectory()) {
-          this.index_dir(path.join(root, dirent.name));
-          return;
-        }
-
-        this.add_hash(util.create_hash.sync(path.join(root, dirent.name)));
-      });
   }
 
-  index_files(root, emit_init) {
+  index_files(root, res) {
     fs.readdir(root, { withFileTypes: true }, (err, files) => {
       if (err) {
         throw err;
@@ -65,7 +77,7 @@ module.exports = exports = class FileLookup {
         }
 
         if (dirent.isDirectory()) {
-          this.index_files(path.join(root, dirent.name), emit_init);
+          this.index_files(path.join(root, dirent.name), res);
           return;
         }
 
@@ -74,7 +86,7 @@ module.exports = exports = class FileLookup {
           this.progress.step();
 
           if (this.progress.is_complete()) {
-            emit_init(this);
+            res(this);
           }
         });
       });
@@ -91,3 +103,5 @@ module.exports = exports = class FileLookup {
     return this.index.includes(hash);
   }
 }
+
+module.exports = exports = FileLookup;

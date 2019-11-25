@@ -2,22 +2,21 @@
 
 const fs = require("fs");
 const path = require("path");
-
 const file_lookup = require("./file_lookup.js");
 const util = {
   create_hash: require("./utils/hash_util.js"),
-  date: require("./utils/date_util.js"),
-  console: require("./utils/console_util.js"),
-  fs: require("./utils/fs_util.js"),
-  progress: require("./utils/progress_util.js")
+         date: require("./utils/date_util.js"),
+      console: require("./utils/console_util.js"),
+           fs: require("./utils/fs_util.js"),
+     progress: require("./utils/progress_util.js")
 };
 
-module.exports = exports = class FileCopy {
-  constructor(argv_util, dst_file_lookup) {
-    this.src = argv_util.get_value("--input");
-    this.dst = argv_util.get_value("--output");
-    this.date_util = util.date(argv_util.get_value("--locale"));
-    this.dst_file_lookup = dst_file_lookup;
+class FileCopy {
+  constructor(src, dst, locale, lookup) {
+    this.src = src;
+    this.dst = dst;
+    this.date_util = util.date(locale);
+    this.dst_file_lookup = lookup;
 
     util.console.log(
       `${this.src.map(s => `← \`${s}'`).join("\n")}\n→ \`${this.dst}'.`,
@@ -27,7 +26,14 @@ module.exports = exports = class FileCopy {
     this.init();
   }
 
-  init(file_lookup) {
+  static async create(src, dst, locale, is_full_indexed) {
+    return new FileCopy(
+      src, dst, locale,
+      await file_lookup.create(dst, is_full_indexed)
+    );
+  }
+
+  init() {
     this.src.forEach(src => {
       util.console.log("[b]Copying files[/b]", util.console.constants.LEADING_SPACE);
       util.console.log(`← ${src}`);
@@ -49,19 +55,15 @@ module.exports = exports = class FileCopy {
   }
 
   copy_folder(root) {
-    const files = fs.readdirSync(root, { withFileTypes: true })
-      .filter(dirent => dirent.name[0] !== ".")
-      .filter(dirent => {
-        if (dirent.isDirectory()) {
-          this.copy_folder(path.join(root, dirent.name));
-          return false;
-        }
-
-        return true;
-      });
+    const files = util.fs.get_dirents(root);
 
     for (let i = 0; i < files.length; ++i) {
       const file = files[i];
+
+      if (file.isDirectory()) {
+        this.copy_folder(path.join(root, file.name));
+        continue;
+      }
 
       const src_file = path.join(root, file.name);
       const filehash = util.create_hash.sync(src_file);
@@ -90,3 +92,5 @@ module.exports = exports = class FileCopy {
     }
   }
 }
+
+module.exports = exports = FileCopy;
