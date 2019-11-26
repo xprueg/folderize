@@ -1,16 +1,12 @@
 "use strict";
 
-const argv_util = require("./utils/argv_util.js")(process.argv);
+const cap = require("./utils/console_arg_parser.js")(process.argv);
 const file_copy = require("./file_copy.js");
 
-argv_util.register("--input", "-i", { expected_values: 1, multiple: true, required: true });
-argv_util.register("--output", "-o", { expected_values: 1, required: true });
-argv_util.register("--locale", "-l", { expected_values: 1, default: "en-US" });
-argv_util.register("--nofullindex");
+cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: true });
+cap.define("--output", { alias: "-o", default: "./" });
+cap.define("--locale", { alias: "-l", default: "en-US" });
+cap.flag("--nofullindex", { alias: "-n" });
+const args = cap.parse();
 
-file_copy.create(
-  argv_util.get_value("--input"),
-  argv_util.get_value("--output"),
-  argv_util.get_value("--locale"),
-  !argv_util.is_set("--nofullindex")
-);
+file_copy.create(args.input, args.output, args.locale, !args.nofullindex);

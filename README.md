@@ -17,7 +17,3 @@ The folderize utility copies files from multiple sources into a single destinati
 
 <div><code><b>-l</b>, <b>--locale</b> <ins>LOCALE</ins></code></div>
 <dl><dd>The locale to be used for folder creation in the destination folder.&nbsp;&nbsp;Locales other than english need at least node v.13 or node build with full-icu.&nbsp;&nbsp;The default is en−US.</pre></dd></dl>
-
-## Todo
-- [ ] Add option to parse n-th arguments instead of a fixed amount.
-- [ ] Throw an error if there are unusued arguments left over after parsing.
