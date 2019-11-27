@@ -4,12 +4,13 @@ const fs = require("fs");
 const path = require("path");
 const file_lookup = require("./file_lookup.js");
 const util = {
-  create_hash: require("./utils/hash_util.js"),
          date: require("./utils/date_util.js"),
       console: require("./utils/console_util.js"),
            fs: require("./utils/fs_util.js"),
      progress: require("./utils/progress_util.js")
 };
+
+const uhash = require("./utils/hash.js");
 
 class FileCopy {
   constructor(src, dst, locale, lookup) {
@@ -66,7 +67,7 @@ class FileCopy {
       }
 
       const src_file = path.join(root, file.name);
-      const filehash = util.create_hash.sync(src_file);
+      const filehash = uhash.sync(src_file);
       const filestat = fs.lstatSync(src_file);
       const datestat = this.date_util.extract(filestat.mtime);
 

@@ -4,11 +4,12 @@ const fs = require("fs");
 const path = require("path");
 
 const util = {
-  create_hash: require("./utils/hash_util.js"),
       console: require("./utils/console_util.js"),
            fs: require("./utils/fs_util.js"),
      progress: require("./utils/progress_util.js")
 };
+
+const uhash = require("./utils/hash.js");
 
 class FileLookup {
   constructor(root, is_full_indexed) {
@@ -59,7 +60,7 @@ class FileLookup {
         continue;
       }
 
-      this.add_hash(util.create_hash.sync(path.join(root, file.name)));
+      this.add_hash(uhash.sync(path.join(root, file.name)));
     }
 
     this.indexed_dirs.push(root);
@@ -81,7 +82,7 @@ class FileLookup {
           return;
         }
 
-        util.create_hash.async(path.join(root, dirent.name), hash => {
+        uhash.async(path.join(root, dirent.name), hash => {
           this.add_hash(hash);
           this.progress.step();
 
