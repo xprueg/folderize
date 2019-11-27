@@ -36,16 +36,17 @@ class FileSystemUtil {
 
   static copy_file(src, dst, src_stat) {
     let rename_tries = 0;
-    while(fs.existsSync(dst)) {
+    let unique_name = dst;
+    while(fs.existsSync(unique_name)) {
       const dst_parsed = path.parse(dst);
-      dst = path.join(
+      unique_name = path.join(
         dst_parsed.dir,
         `${dst_parsed.name} (${++rename_tries})${dst_parsed.ext}`
       );
     }
 
-    fs.copyFileSync(src, dst);
-    fs.utimesSync(dst, src_stat.atime, src_stat.mtime);
+    fs.copyFileSync(src, unique_name);
+    fs.utimesSync(unique_name, src_stat.atime, src_stat.mtime);
   }
 }
 
