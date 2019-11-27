@@ -60,7 +60,7 @@ class FileCopy {
   }
 
   copy_folder(src_folder) {
-    ufs.get_dirents(src_folder).forEach(file => {
+    fs.readdirSync(src_folder, { withFileTypes: true }).forEach(file => {
       if (file.isDirectory()) {
         return void this.copy_folder(path.join(src_folder, file.name));
       }

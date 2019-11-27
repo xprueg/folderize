@@ -10,7 +10,7 @@ class FileSystemUtil {
       files: 0
     };
 
-    const files = FileSystemUtil.get_dirents(root);
+    const files = fs.readdirSync(root, { withFileTypes: true });
     for (let i = 0; i < files.length; ++i) {
       const file = files[i];
 
@@ -26,12 +26,6 @@ class FileSystemUtil {
     }
 
     return stat;
-  }
-
-  static get_dirents(root) {
-    return fs
-      .readdirSync(root, { withFileTypes: true })
-      .filter(dirent => dirent.name[0] !== ".");
   }
 
   static get_unique_filename(path) {

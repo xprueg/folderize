@@ -76,10 +76,6 @@ class FileLookup {
       }
 
       files.forEach(dirent => {
-        if (dirent.name[0] == ".") {
-          return;
-        }
-
         if (dirent.isDirectory()) {
           this.index_files(path.join(root, dirent.name), res);
           return;
