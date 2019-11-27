@@ -42,7 +42,11 @@ class FileLookup {
         `[u]${lookup.folder_stats.dirs} directories[/u].`
       );
 
-      lookup.index_files(root, res);
+      if (lookup.folder_stats.files > 0) {
+        lookup.index_files(root, res);
+      } else {
+        res(lookup);
+      }
     });
   }
 
