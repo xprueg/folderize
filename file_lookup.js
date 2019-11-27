@@ -104,4 +104,4 @@ class FileLookup {
   }
 }
 
-module.exports = exports = FileLookup;
+module.exports = FileLookup;

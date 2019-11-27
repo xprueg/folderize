@@ -28,12 +28,12 @@ class FileSystemUtil {
     return stat;
   }
 
-  static get_unique_filename(path) {
+  static get_unique_filename(filepath) {
     let rename_tries = 0;
-    let unique = path;
+    let unique = filepath;
 
     while(fs.existsSync(unique)) {
-      const parsed = path.parse(path);
+      const parsed = path.parse(filepath);
       unique = path.join(
         parsed.dir,
         `${parsed.name} (${++rename_tries})${parsed.ext}`

@@ -1,15 +1,14 @@
 "use strict";
 
-const util = {
-  console: require("./console_util.js")
-};
+const cli = require("./console_util.js");
+const { OVERWRITE_LINE } = cli.constants;
 
 module.exports = exports = class ProgressUtil {
   constructor(folder_stats, step_msg) {
     this.folder_stats = folder_stats;
     this.step_msg = step_msg;
 
-    this.progress_steps = 10;
+    this.progress_steps = 20;
     this.progress_step = this.folder_stats.files / this.progress_steps;
     this.current_progress_step = 0;
 
@@ -88,7 +87,10 @@ module.exports = exports = class ProgressUtil {
     }
 
     if (current_count - this.current_progress_step > this.progress_step || progress === 100) {
-      util.console.log(this._replace_vars(this.step_msg));
+      cli.log(
+        this._replace_vars(this.step_msg),
+        this.current_progress_step === 0 ? false : OVERWRITE_LINE
+      );
       this.current_progress_step += this.progress_step;
     }
   }

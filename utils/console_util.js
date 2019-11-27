@@ -1,5 +1,7 @@
 "use strict";
 
+const readline = require("readline");
+
 const ttyf = {
   clear: "\x1B[0m",
   bold: "\x1B[1m",
@@ -8,7 +10,8 @@ const ttyf = {
 };
 
 const constants = {
-  LEADING_SPACE: 0x0
+  LEADING_SPACE: 0x0,
+  OVERWRITE_LINE: 0x1
 };
 
 const get_timestamp = () => {
@@ -27,6 +30,11 @@ const log = (msg, opts) => {
 
   if (opts === constants.LEADING_SPACE) {
     console.log("");
+  }
+
+  if (opts === constants.OVERWRITE_LINE) {
+    readline.moveCursor(process.stdin, 0, -1);
+    readline.clearLine(process.stdin, 0);
   }
 
   msg
