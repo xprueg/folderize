@@ -4,11 +4,12 @@ const fs = require("fs");
 const path = require("path");
 
 const util = {
-      console: require("./utils/console_util.js"),
-           fs: require("./utils/fs_util.js"),
      progress: require("./utils/progress_util.js")
 };
 
+const cli = require("./utils/console_util.js");
+const { LEADING_SPACE } = cli.constants;
+const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
 
 class FileLookup {
@@ -26,18 +27,16 @@ class FileLookup {
         return res(lookup);
       }
 
-      util.console.log(
-        "[b]Creating file lookup[/b]",
-        util.console.constants.LEADING_SPACE
-      );
+      cli.log("[b]Creating file lookup[/b]", LEADING_SPACE);
+      cli.log(`→ ${root}`);
 
-      lookup.folder_stats = util.fs.get_folder_stats(root);
+      lookup.folder_stats = ufs.get_folder_stats(root);
       lookup.progress = new util.progress(
         lookup.folder_stats,
         "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)"
       );
 
-      util.console.log(
+      cli.log(
         `Found [u]${lookup.folder_stats.files} file(s)[/u] in ` +
         `[u]${lookup.folder_stats.dirs} directories[/u].`
       );
@@ -55,7 +54,7 @@ class FileLookup {
       return;
     }
 
-    const files = util.fs.get_dirents(root);
+    const files = ufs.get_dirents(root);
     for (let i = 0; i < files.length; ++i) {
       const file = files[i];
 

@@ -4,29 +4,15 @@ const fs = require("fs");
 const path = require("path");
 const file_lookup = require("./file_lookup.js");
 const util = {
-         date: require("./utils/date_util.js"),
-      console: require("./utils/console_util.js"),
-           fs: require("./utils/fs_util.js"),
      progress: require("./utils/progress_util.js")
 };
 
+const cli = require("./utils/console_util.js");
+const { LEADING_SPACE } = cli.constants;
+const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
 
 class FileCopy {
-  constructor(src, dst, locale, lookup) {
-    this.src = src;
-    this.dst = dst;
-    this.date_util = util.date(locale);
-    this.dst_file_lookup = lookup;
-
-    util.console.log(
-      `${this.src.map(s => `← \`${s}'`).join("\n")}\n→ \`${this.dst}'.`,
-      util.console.constants.LEADING_SPACE
-    );
-
-    this.init();
-  }
-
   static async create(src, dst, locale, is_full_indexed) {
     return new FileCopy(
       src, dst, locale,
@@ -34,19 +20,37 @@ class FileCopy {
     );
   }
 
+  constructor(src, dst, locale, lookup) {
+    this.src = src;
+    this.dst = dst;
+    this.formatter = {
+      day: new Intl.DateTimeFormat(locale, { day: "numeric" }),
+      month: new Intl.DateTimeFormat(locale, { month: "long" }),
+      year: new Intl.DateTimeFormat(locale, { year: "numeric" })
+    };
+    this.dst_lookup = lookup;
+
+    cli.log(
+      `${this.src.map(s => `← \`${s}'`).join("\n")}\n→ \`${this.dst}'`,
+      LEADING_SPACE
+    );
+
+    this.init();
+  }
+
   init() {
     this.src.forEach(src => {
-      util.console.log("[b]Copying files[/b]", util.console.constants.LEADING_SPACE);
-      util.console.log(`← ${src}`);
+      cli.log("[b]Copying files[/b]", LEADING_SPACE);
+      cli.log(`← ${src}`);
 
-      this.folder_stats = util.fs.get_folder_stats(src);
+      this.folder_stats = ufs.get_folder_stats(src);
       this.progress = new util.progress(
         this.folder_stats,
         "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)" +
         "__IF:SKIPPED=, Skipped __SKIPPED__ file(s):FI__"
       );
 
-      util.console.log(
+      cli.log(
         `Found [u]${this.folder_stats.files} file(s)[/u] in ` +
         `[u]${this.folder_stats.dirs} directories[/u].`
       );
@@ -55,43 +59,57 @@ class FileCopy {
     });
   }
 
-  copy_folder(root) {
-    const files = util.fs.get_dirents(root);
-
-    for (let i = 0; i < files.length; ++i) {
-      const file = files[i];
-
+  copy_folder(src_folder) {
+    ufs.get_dirents(src_folder).forEach(file => {
       if (file.isDirectory()) {
-        this.copy_folder(path.join(root, file.name));
-        continue;
+        return void this.copy_folder(path.join(src_folder, file.name));
       }
 
-      const src_file = path.join(root, file.name);
-      const filehash = uhash.sync(src_file);
-      const filestat = fs.lstatSync(src_file);
-      const datestat = this.date_util.extract(filestat.mtime);
+      const src_path = path.join(src_folder, file.name);
+      const src_hash = uhash.sync(src_path);
+      const src_stat = fs.lstatSync(src_path);
+      const src_mtime_date = new Date(src_stat.mtime);
+      const src_date = {
+        day: this.formatter.day.format(src_mtime_date),
+        month: this.formatter.month.format(src_mtime_date),
+        year: this.formatter.year.format(src_mtime_date)
+      };
 
-      const dst_folder = path.join(this.dst, datestat.year, datestat.month, datestat.day);
+      const dst_folder = path.join(this.dst, src_date.year, src_date.month, src_date.day);
+      const dst_path = path.join(dst_folder, file.name);
 
-      if (!this.dst_file_lookup.is_full_indexed) {
-        this.dst_file_lookup.index_dir(dst_folder);
+      if (!this.dst_lookup.is_full_indexed) {
+        this.dst_lookup.index_dir(dst_folder);
       }
 
-      if (this.dst_file_lookup.contains(filehash)) {
-        this.progress.step({ SKIPPED: +1 });
-        continue;
+      if (this.dst_lookup.contains(src_hash)) {
+        return void this.progress.step({ SKIPPED: +1 });
       }
 
       if (!fs.existsSync(dst_folder)) {
         fs.mkdirSync(dst_folder, { recursive: true });
       }
 
-      util.fs.copy_file(src_file, path.join(dst_folder, file.name), filestat);
+      let dst_path_unique = dst_path;
+      let is_copied = false;
+      do {
+        try {
+          fs.copyFileSync(src_path, dst_path_unique, fs.constants.COPYFILE_EXCL);
+          fs.utimesSync(dst_path, src_stat.atime, src_stat.mtime);
+          is_copied = true;
+        } catch(err) {
+          if (err.code === "EEXIST") {
+            dst_path_unique = ufs.get_unique_filename(dst_path);
+          } else {
+            throw err;
+          }
+        }
+      } while (!is_copied);
 
-      this.dst_file_lookup.add_hash(filehash);
+      this.dst_lookup.add_hash(src_hash);
       this.progress.step();
-    }
+    });
   }
 }
 
-module.exports = exports = FileCopy;
+module.exports = FileCopy;
