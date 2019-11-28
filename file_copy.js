@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const file_lookup = require("./file_lookup.js");
 const util = {
-     progress: require("./utils/progress_util.js")
+     progress: require("./utils/progress.js")
 };
 
 const cli = require("./utils/console_util.js");
@@ -44,11 +44,9 @@ class FileCopy {
       cli.log(`← ${src}`);
 
       this.folder_stats = ufs.get_folder_stats(src);
-      this.progress = new util.progress(
-        this.folder_stats,
-        "Copied __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)" +
-        "__IF:SKIPPED=, Skipped __SKIPPED__ file(s):FI__"
-      );
+      this.progress = util.progress.to(this.folder_stats.files)
+        .msg("Copied %P% (%C/%T)")
+        .msg(", Skipped %SKP file(s)", args => args.hasOwnProperty("SKP"));
 
       cli.log(
         `Found [u]${this.folder_stats.files} file(s)[/u] in ` +
@@ -83,7 +81,7 @@ class FileCopy {
       }
 
       if (this.dst_lookup.contains(src_hash)) {
-        return void this.progress.step({ SKIPPED: +1 });
+        return void this.progress.update("SKP", 1).step();
       }
 
       if (!fs.existsSync(dst_folder)) {

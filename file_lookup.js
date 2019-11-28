@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const util = {
-     progress: require("./utils/progress_util.js")
+     progress: require("./utils/progress.js")
 };
 
 const cli = require("./utils/console_util.js");
@@ -31,10 +31,8 @@ class FileLookup {
       cli.log(`→ ${root}`);
 
       lookup.folder_stats = ufs.get_folder_stats(root);
-      lookup.progress = new util.progress(
-        lookup.folder_stats,
-        "Indexed __PROGRESS__% (__CURRENTCOUNT__/__TOTALCOUNT__)"
-      );
+      lookup.progress = util.progress.to(lookup.folder_stats.files)
+        .msg("Indexed %P% (%C/%T)");
 
       cli.log(
         `Found [u]${lookup.folder_stats.files} file(s)[/u] in ` +
