@@ -81,7 +81,7 @@ class FileCopy {
       }
 
       if (this.dst_lookup.contains(src_hash)) {
-        return void this.progress.update("SKP", 1).step();
+        return void this.progress.update("SKP", +1).step();
       }
 
       if (!fs.existsSync(dst_folder)) {

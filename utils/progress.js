@@ -4,8 +4,8 @@ const cli = require("./console_util.js");
 const { OVERWRITE_LINE } = cli.constants;
 
 class Progress {
-  static to(val) {
-    return new Progress(0, val);
+  static to(val, options = {}) {
+    return new Progress(0, val, options);
   }
 
   constructor(from = 0, to = 0, options = {}) {
@@ -14,7 +14,7 @@ class Progress {
     this.options = options;
     this.messages = [];
 
-    this.max_steps = 20;
+    this.max_steps = 100;
     this.single_step = to / this.max_steps;
     this.current_step = 0;
 
@@ -36,12 +36,11 @@ class Progress {
     }, this.tokens);
   }
 
-  msg(msg, condition) {
-    this.messages.push(new ProgressMessage(msg, condition));
+  msg(msg, is_active) {
+    this.messages.push(new ProgressMessage(msg, is_active));
 
     return this;
   }
-
 
   set(token, val) {
     this.tokens[token] = val;
@@ -71,7 +70,10 @@ class Progress {
 
     if (this.from - this.current_step > this.single_step || this.percentage_completed === 100) {
       cli.log(
-        this.messages.reduce((acc, msg) => acc += msg.to_str(this._get_tokens(), this.token_replacer_regexp), ""),
+        this.messages.reduce(
+          (acc, msg) => acc += msg.to_str(this._get_tokens(), this.token_replacer_regexp),
+          String()
+        ),
         this.current_step === 0 ? false : OVERWRITE_LINE
       );
 
@@ -81,18 +83,20 @@ class Progress {
 }
 
 class ProgressMessage {
-  constructor(msg, is_active = args => true) {
+  constructor(msg, is_active = tokens => true) {
     this.msg = msg;
     this.is_active = is_active;
   }
 
-  to_str(args, token_replacer_regexp) {
-    if (!this.is_active(args)) return "";
-
-    return this.msg.replace(
-      token_replacer_regexp,
-      (raw, key) => args.hasOwnProperty(key) ? args[key] : raw
-    );
+  to_str(tokens, token_replacer_regexp) {
+    if (this.is_active(tokens)) {
+      return this.msg.replace(
+        token_replacer_regexp,
+        (m, t) => tokens.hasOwnProperty(t) ? tokens[t] : m
+      );
+    } else {
+      return String();
+    }
   }
 }
 
