@@ -2,12 +2,10 @@
 
 const fs = require("fs");
 const path = require("path");
-const file_lookup = require("./file_lookup.js");
-const util = {
-     progress: require("./utils/progress.js")
-};
 
-const cli = require("./utils/console_util.js");
+const file_lookup = require("./file_lookup.js");
+const progress = require("./utils/progress.js");
+const cli = require("./utils/console.js");
 const { LEADING_SPACE } = cli.constants;
 const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
@@ -40,11 +38,11 @@ class FileCopy {
 
   init() {
     this.src.forEach(src => {
-      cli.log("[b]Copying files[/b]", LEADING_SPACE);
+      cli.log("[r]Copying files[/r]", LEADING_SPACE);
       cli.log(`← ${src}`);
 
       this.folder_stats = ufs.get_folder_stats(src);
-      this.progress = util.progress.to(this.folder_stats.files)
+      this.progress = progress.to(this.folder_stats.files)
         .msg("Copied %P% (%C/%T)")
         .msg(", Skipped %SKP file(s)", args => args.hasOwnProperty("SKP"));
 

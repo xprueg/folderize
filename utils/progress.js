@@ -1,6 +1,6 @@
 "use strict";
 
-const cli = require("./console_util.js");
+const cli = require("./console.js");
 const { OVERWRITE_LINE } = cli.constants;
 
 class Progress {

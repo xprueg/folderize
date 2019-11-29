@@ -3,11 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const util = {
-     progress: require("./utils/progress.js")
-};
-
-const cli = require("./utils/console_util.js");
+const progress = require("./utils/progress.js");
+const cli = require("./utils/console.js");
 const { LEADING_SPACE } = cli.constants;
 const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
@@ -27,11 +24,11 @@ class FileLookup {
         return res(lookup);
       }
 
-      cli.log("[b]Creating file lookup[/b]", LEADING_SPACE);
+      cli.log("[r]Creating file lookup[/r]", LEADING_SPACE);
       cli.log(`→ ${root}`);
 
       lookup.folder_stats = ufs.get_folder_stats(root);
-      lookup.progress = util.progress.to(lookup.folder_stats.files)
+      lookup.progress = progress.to(lookup.folder_stats.files)
         .msg("Indexed %P% (%C/%T)");
 
       cli.log(
