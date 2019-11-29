@@ -34,6 +34,7 @@ const ansi_esc_code = {
 };
 
 const constants = {
+  NOOP: 0,
   LEADING_SPACE: 1 << 0,
   OVERWRITE_LINE: 1 << 1
 };
@@ -49,7 +50,7 @@ const get_timestamp = () => {
   return timestamp_formatter.format(Date.now());
 }
 
-const log = (msg, options = 0x0) => {
+const log = (msg, options = constants.NOOP) => {
   const prompt = `[${get_timestamp()}]`;
 
   if (options & constants.LEADING_SPACE) {

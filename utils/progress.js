@@ -1,7 +1,7 @@
 "use strict";
 
 const cli = require("./console.js");
-const { OVERWRITE_LINE } = cli.constants;
+const { NOOP, OVERWRITE_LINE } = cli.constants;
 
 class Progress {
   static to(val, options = {}) {
@@ -69,14 +69,16 @@ class Progress {
     this.percentage_completed = Math.floor(100 / this.to * this.from);
 
     if (this.from - this.current_step > this.single_step || this.percentage_completed === 100) {
-      cli.log(
-        this.messages.reduce(
-          (acc, msg) => acc += msg.to_str(this._get_tokens(), this.token_replacer_regexp),
-          String()
-        ),
-        this.current_step === 0 ? false : OVERWRITE_LINE
+      let message = this.messages.reduce(
+        (acc, msg) => acc += msg.to_str(this._get_tokens(), this.token_replacer_regexp),
+        String()
       );
 
+      if (this.percentage_completed !== 100) {
+        message = `[r]${message}[/r]`;
+      }
+
+      cli.log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE );
       this.current_step += this.single_step;
     }
   }

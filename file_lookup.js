@@ -24,7 +24,7 @@ class FileLookup {
         return res(lookup);
       }
 
-      cli.log("[r]Creating file lookup[/r]", LEADING_SPACE);
+      cli.log("Creating file lookup", LEADING_SPACE);
       cli.log(`→ ${root}`);
 
       lookup.folder_stats = ufs.get_folder_stats(root);

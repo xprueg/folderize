@@ -38,7 +38,7 @@ class FileCopy {
 
   init() {
     this.src.forEach(src => {
-      cli.log("[r]Copying files[/r]", LEADING_SPACE);
+      cli.log("Copying files", LEADING_SPACE);
       cli.log(`← ${src}`);
 
       this.folder_stats = ufs.get_folder_stats(src);
