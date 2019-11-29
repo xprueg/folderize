@@ -10,8 +10,8 @@ const ttyf = {
 };
 
 const constants = {
-  LEADING_SPACE: 0x0,
-  OVERWRITE_LINE: 0x1
+  LEADING_SPACE: 1 << 0,
+  OVERWRITE_LINE: 1 << 1
 };
 
 const get_timestamp = () => {
@@ -28,11 +28,11 @@ const get_timestamp = () => {
 const log = (msg, opts) => {
   const prompt = `[${get_timestamp()}]`;
 
-  if (opts === constants.LEADING_SPACE) {
+  if (opts & constants.LEADING_SPACE) {
     console.log("");
   }
 
-  if (opts === constants.OVERWRITE_LINE) {
+  if (opts & constants.OVERWRITE_LINE) {
     readline.moveCursor(process.stdin, 0, -1);
     readline.clearLine(process.stdin, 0);
   }
