@@ -20,15 +20,20 @@ class Progress {
 
     this.percentage_completed = 0;
 
-    this.user_vars = {};
+    this.tokens = {};
+    this.token_replacer_regexp = this._get_token_replacer_regexp(this._get_tokens());
   }
 
-  get_vars() {
+  _get_token_replacer_regexp(tokens) {
+    return new RegExp(`(?<!%)%(${ Object.keys(tokens).join("|") })+`, "g");
+  }
+
+  _get_tokens() {
     return Object.assign({}, {
       C: this.from,
       T: this.to,
       P: this.percentage_completed
-    }, this.user_vars);
+    }, this.tokens);
   }
 
   msg(msg, condition) {
@@ -37,24 +42,27 @@ class Progress {
     return this;
   }
 
-  is_complete() {
-    return this.percentage_completed === 100 ? true : false;
-  }
 
-  set(kvar, val) {
-    this.user_vars[kvar] = val;
+  set(token, val) {
+    this.tokens[token] = val;
+    this.token_replacer_regexp = this._get_token_replacer_regexp(this._get_tokens());
 
     return this;
   }
 
-  update(kvar, val) {
-    if (!this.user_vars.hasOwnProperty(kvar)) {
-      this.user_vars[kvar] = 0;
+  update(token, val) {
+    if (!this.tokens.hasOwnProperty(token)) {
+      this.tokens[token] = 0;
     }
 
-    this.user_vars[kvar] += val;
+    this.tokens[token] += val;
+    this.token_replacer_regexp = this._get_token_replacer_regexp(this._get_tokens());
 
     return this;
+  }
+
+  is_complete() {
+    return this.percentage_completed === 100 ? true : false;
   }
 
   step() {
@@ -63,7 +71,7 @@ class Progress {
 
     if (this.from - this.current_step > this.single_step || this.percentage_completed === 100) {
       cli.log(
-        this.messages.reduce((acc, msg) => acc += msg.to_str(this.get_vars()), ""),
+        this.messages.reduce((acc, msg) => acc += msg.to_str(this._get_tokens(), this.token_replacer_regexp), ""),
         this.current_step === 0 ? false : OVERWRITE_LINE
       );
 
@@ -78,15 +86,13 @@ class ProgressMessage {
     this.is_active = is_active;
   }
 
-  to_str(args) {
+  to_str(args, token_replacer_regexp) {
     if (!this.is_active(args)) return "";
 
-    const re = new RegExp(`(?<!%)%(${ Object.keys(args).join("|") })+`, "g");
-    return this.msg.replace(re, m => {
-      m = m.substr(1);
-
-      return args.hasOwnProperty(m) ? args[m] : "$1";
-    });
+    return this.msg.replace(
+      token_replacer_regexp,
+      (raw, key) => args.hasOwnProperty(key) ? args[key] : raw
+    );
   }
 }
 
