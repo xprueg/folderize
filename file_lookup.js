@@ -24,17 +24,17 @@ class FileLookup {
         return res(lookup);
       }
 
-      cli.log("Creating file lookup", LEADING_SPACE);
-      cli.log(`→ ${root}`);
+      cli.log(`→ Creating file lookup for [u]${root}[/u].`, LEADING_SPACE);
 
       lookup.folder_stats = ufs.get_folder_stats(root);
-      lookup.progress = progress.to(lookup.folder_stats.files)
-        .msg("Indexed %P% (%C/%T)");
-
       cli.log(
-        `Found [u]${lookup.folder_stats.files} file(s)[/u] in ` +
-        `[u]${lookup.folder_stats.dirs} directories[/u].`
+        `\x20\x20Found ${lookup.folder_stats.files} file(s) in ` +
+        `${lookup.folder_stats.dirs} directories.`
       );
+
+      lookup.progress = progress.to(lookup.folder_stats.files)
+        .msg("\x20\x20Indexed %P% (%C/%T)")
+        .msg(", done.", tokens => tokens.P === 100);
 
       if (lookup.folder_stats.files > 0) {
         lookup.index_files(root, res);

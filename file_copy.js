@@ -28,31 +28,28 @@ class FileCopy {
     };
     this.dst_lookup = lookup;
 
-    cli.log(
-      `${this.src.map(s => `← \`${s}'`).join("\n")}\n→ \`${this.dst}'`,
-      LEADING_SPACE
-    );
-
     this.init();
   }
 
   init() {
     this.src.forEach(src => {
-      cli.log("Copying files", LEADING_SPACE);
-      cli.log(`← ${src}`);
+      cli.log(`← Copying files from [u]${src}[/u].`, LEADING_SPACE);
 
       this.folder_stats = ufs.get_folder_stats(src);
-      this.progress = progress.to(this.folder_stats.files)
-        .msg("Copied %P% (%C/%T)")
-        .msg(", Skipped %SKP file(s)", args => args.hasOwnProperty("SKP"));
-
       cli.log(
-        `Found [u]${this.folder_stats.files} file(s)[/u] in ` +
-        `[u]${this.folder_stats.dirs} directories[/u].`
+        `\x20\x20Found ${this.folder_stats.files} file(s) in ` +
+        `${this.folder_stats.dirs} directories.`
       );
+
+      this.progress = progress.to(this.folder_stats.files)
+        .msg("\x20\x20Copied %P% (%C/%T)")
+        .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
+        .msg(", done.", tokens => tokens.P === 100);
 
       this.copy_folder(src);
     });
+
+    console.log(String());
   }
 
   copy_folder(src_folder) {

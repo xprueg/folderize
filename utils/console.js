@@ -8,6 +8,7 @@ const ansi_esc_code = {
 
   // Formatting
   b: "\x1B[1m",
+  f: "\x1B[2m",
   i: "\x1B[3m",
   u: "\x1B[4m",
   r: "\x1B[7m",
@@ -51,10 +52,10 @@ const get_timestamp = () => {
 }
 
 const log = (msg, options = constants.NOOP) => {
-  const prompt = `[${get_timestamp()}]`;
+  msg = `[f]${get_timestamp()}[/f] ` + msg;
 
   if (options & constants.LEADING_SPACE) {
-    console.log("");
+    console.log(String());
   }
 
   if (options & constants.OVERWRITE_LINE) {
@@ -73,9 +74,7 @@ const log = (msg, options = constants.NOOP) => {
     } else {
       return m;
     }
-  }).split("\n").forEach((line, i) => {
-    console.log(`${!i ? prompt : `${"\x20".repeat(prompt.length - 1)}↗`}: ${line}`);
-  });
+  }).split("\n").forEach(line => void console.log(line));
 };
 
 module.exports = {
