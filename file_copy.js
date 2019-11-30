@@ -11,22 +11,23 @@ const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
 
 class FileCopy {
-  static async create(src, dst, locale, is_full_indexed) {
+  static async create(src, dst, locale, exclude, is_full_indexed) {
     return new FileCopy(
-      src, dst, locale,
+      src, dst, locale, exclude,
       await file_lookup.create(dst, is_full_indexed)
     );
   }
 
-  constructor(src, dst, locale, lookup) {
+  constructor(src, dst, locale, exclude, lookup) {
     this.src = src;
     this.dst = dst;
+    this.exclude = exclude;
+    this.dst_lookup = lookup;
     this.formatter = {
       day: new Intl.DateTimeFormat(locale, { day: "numeric" }),
       month: new Intl.DateTimeFormat(locale, { month: "long" }),
       year: new Intl.DateTimeFormat(locale, { year: "numeric" })
     };
-    this.dst_lookup = lookup;
 
     this.init();
   }
@@ -44,6 +45,8 @@ class FileCopy {
       this.progress = progress.to(this.folder_stats.files)
         .msg("\x20\x20Copied %P% (%C/%T)")
         .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
+        .msg(", Excluded %EXCLF file(s)", tokens => tokens.hasOwnProperty("EXCLF"))
+        .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
         .msg(", done.", tokens => tokens.P === 100);
 
       this.copy_folder(src);
@@ -54,6 +57,10 @@ class FileCopy {
 
   copy_folder(src_folder) {
     fs.readdirSync(src_folder, { withFileTypes: true }).forEach(file => {
+      if (this.exclude && this.exclude.includes(file.name)) {
+        return void this.progress.update(file.isDirectory() ? "EXCLD" : "EXCLF", +1).step();
+      }
+
       if (file.isDirectory()) {
         return void this.copy_folder(path.join(src_folder, file.name));
       }
