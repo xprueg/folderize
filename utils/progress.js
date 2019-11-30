@@ -66,7 +66,7 @@ class Progress {
 
   step() {
     this.from = this.from + 1;
-    this.percentage_completed = Math.floor(100 / this.to * this.from);
+    this.percentage_completed = this.to === this.from ? 100 : Math.floor(100 / this.to * this.from);
 
     if (this.from - this.current_step > this.single_step || this.percentage_completed === 100) {
       let message = this.messages.reduce(
@@ -78,7 +78,7 @@ class Progress {
         message = `[r]${message}[/r]`;
       }
 
-      cli.log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE );
+      cli.log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE);
       this.current_step += this.single_step;
     }
   }
