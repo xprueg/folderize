@@ -10,37 +10,41 @@ const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
 
 class FileLookup {
-  constructor(root, is_full_indexed) {
+  constructor(is_full_indexed) {
+    this.progress = undefined;
+
     this.is_full_indexed = is_full_indexed;
+
+    this.stats = undefined;
     this.indexed_dirs = [];
     this.index = [];
   }
 
-  static create(root, is_full_indexed) {
-    const lookup = new FileLookup(root, is_full_indexed);
+  static async create(root, is_full_indexed) {
+    const lookup = new FileLookup(is_full_indexed);
+
+    if (!fs.existsSync(root) || !is_full_indexed) {
+      return lookup;
+    }
+
+    lookup.stats = ufs.get_folder_stats(root);
+    lookup.progress = progress.to(lookup.stats.files)
+      .msg("\x20\x20Indexed %P% (%C/%T)")
+      .msg(", done.", tokens => tokens.P === 100);
+
+    cli.log(
+      `→ Creating file lookup for [u]${root}[/u].\n` +
+      `\x20\x20Found ${lookup.stats.files} file(s) in ` +
+      `${lookup.stats.dirs} directories.`,
+      LEADING_SPACE
+    );
 
     return new Promise((res, rej) => {
-      if (!fs.existsSync(root) || !is_full_indexed) {
+      if (lookup.stats.files === 0) {
         return res(lookup);
       }
 
-      cli.log(`→ Creating file lookup for [u]${root}[/u].`, LEADING_SPACE);
-
-      lookup.folder_stats = ufs.get_folder_stats(root);
-      cli.log(
-        `\x20\x20Found ${lookup.folder_stats.files} file(s) in ` +
-        `${lookup.folder_stats.dirs} directories.`
-      );
-
-      lookup.progress = progress.to(lookup.folder_stats.files)
-        .msg("\x20\x20Indexed %P% (%C/%T)")
-        .msg(", done.", tokens => tokens.P === 100);
-
-      if (lookup.folder_stats.files > 0) {
-        lookup.index_files(root, res);
-      } else {
-        res(lookup);
-      }
+      lookup._index_files(root, res);
     });
   }
 
@@ -49,34 +53,29 @@ class FileLookup {
       return;
     }
 
-    const files = ufs.get_dirents(root);
-    for (let i = 0; i < files.length; ++i) {
-      const file = files[i];
-
+    fs.readdirSync(root, { withFileTypes: true }).forEach(file => {
       if (file.isDirectory()) {
-        this.index_dir(path.join(root, file.name));
-        continue;
+        return void this.index_dir(path.join(root, file.name));
       }
 
       this.add_hash(uhash.sync(path.join(root, file.name)));
-    }
+    });
 
     this.indexed_dirs.push(root);
   }
 
-  index_files(root, res) {
+  _index_files(root, res) {
     fs.readdir(root, { withFileTypes: true }, (err, files) => {
       if (err) {
         throw err;
       }
 
-      files.forEach(dirent => {
-        if (dirent.isDirectory()) {
-          this.index_files(path.join(root, dirent.name), res);
-          return;
+      files.forEach(file => {
+        if (file.isDirectory()) {
+          return void this._index_files(path.join(root, file.name), res);
         }
 
-        uhash.async(path.join(root, dirent.name), hash => {
+        uhash.async(path.join(root, file.name), hash => {
           this.add_hash(hash);
           this.progress.step();
 

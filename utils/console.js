@@ -52,7 +52,7 @@ const get_timestamp = () => {
 }
 
 const log = (msg, options = constants.NOOP) => {
-  msg = `[f]${get_timestamp()}[/f] ` + msg;
+  const timestamp = `\x1B[2m${get_timestamp()}\x1B[0m `;
 
   if (options & constants.LEADING_SPACE) {
     console.log(String());
@@ -74,7 +74,7 @@ const log = (msg, options = constants.NOOP) => {
     } else {
       return m;
     }
-  }).split("\n").forEach(line => void console.log(line));
+  }).split("\n").forEach(line => void console.log(timestamp + line));
 };
 
 module.exports = {
