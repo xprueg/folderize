@@ -1,6 +1,8 @@
 # folderize
 The folderize utility copies files from multiple sources into a single destination folder.&nbsp;&nbsp;In the destination folder the files are sorted in a folder tree created by their last modification time (`mtime`).
 
+![Termial Preview](./preview/terminal.png)
+
 ## Synopsis
 <pre><b>folderize</b> <b>--input</b> <ins>PATH</ins> <ins>...</ins> [<b>--output</b> <ins>PATH</ins>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>NAME</ins> <ins>...</ins>] [<b>--nofullindex</b>]</pre>
 
