@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const progress = require("./utils/progress.js");
+const { LOADER } = progress.constants;
 const cli = require("./utils/console.js");
 const { LEADING_SPACE } = cli.constants;
 const ufs = require("./utils/fs.js");
@@ -29,7 +30,8 @@ class FileLookup {
 
     lookup.stats = ufs.get_folder_stats(root);
     lookup.progress = progress.to(lookup.stats.files)
-      .msg("\x20\x20Indexed %P% (%C/%T)")
+      .loader(LOADER, "\x20\x20")
+      .msg("Indexed %P% (%C/%T)")
       .msg(", done.", tokens => tokens.P === 100);
 
     cli.log(

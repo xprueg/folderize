@@ -5,10 +5,12 @@ const path = require("path");
 
 const file_lookup = require("./file_lookup.js");
 const progress = require("./utils/progress.js");
+const { LOADER } = progress.constants;
 const cli = require("./utils/console.js");
 const { LEADING_SPACE } = cli.constants;
 const ufs = require("./utils/fs.js");
 const uhash = require("./utils/hash.js");
+const glob_match = require("./utils/glob.js");
 
 class FileCopy {
   static async create(src, dst, locale, exclude, is_full_indexed) {
@@ -43,7 +45,8 @@ class FileCopy {
       );
 
       this.progress = progress.to(this.folder_stats.files)
-        .msg("\x20\x20Copied %P% (%C/%T)")
+        .loader(LOADER, "\x20\x20")
+        .msg("Copied %P% (%C/%T)")
         .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
         .msg(", Excluded %EXCLF file(s)", tokens => tokens.hasOwnProperty("EXCLF"))
         .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
@@ -57,7 +60,8 @@ class FileCopy {
 
   copy_folder(src_folder) {
     fs.readdirSync(src_folder, { withFileTypes: true }).forEach(file => {
-      if (this.exclude && this.exclude.includes(file.name)) {
+      if (this.exclude &&
+          this.exclude.filter(pattern => glob_match(pattern, file.name)).length > 0) {
         return void this.progress.update(file.isDirectory() ? "EXCLD" : "EXCLF", +1).step();
       }
 

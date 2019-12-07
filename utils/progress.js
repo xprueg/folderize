@@ -14,10 +14,18 @@ class Progress {
     this.options = options;
     this.messages = [];
 
+    this.loader_msg = { loading: String(), done: String() };
+    this.loader_gen = function* (loader) {
+      let index = 0;
+
+      while(true) {
+        yield `${loader[index++ % loader.length]}\x20`;
+      }
+    }(["⠻", "⠽", "⠾", "⠷", "⠯", "⠟"]);
+
     this.max_steps = 100;
     this.single_step = to / this.max_steps;
     this.current_step = 0;
-
     this.percentage_completed = 0;
 
     this.tokens = {};
@@ -34,6 +42,15 @@ class Progress {
       T: this.to,
       P: this.percentage_completed
     }, this.tokens);
+  }
+
+  loader(loading, done = String()) {
+    this.loader_msg = {
+      loading: loading,
+      done: done
+    };
+
+    return this;
   }
 
   msg(msg, is_active) {
@@ -75,13 +92,23 @@ class Progress {
       );
 
       if (this.percentage_completed !== 100) {
-        message = `[r]${message}[/r]`;
+        const load_msg = this.loader_msg.loading & Progress.constants.LOADER
+          ? this.loader_gen.next().value
+          : this.loader_msg.loading;
+
+        message = `${load_msg}[r]${message}[/r]`;
+      } else {
+        message = this.loader_msg.done + message;
       }
 
       cli.log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE);
       this.current_step += this.single_step;
     }
   }
+}
+
+Progress.constants = {
+  LOADER: 1 << 0
 }
 
 class ProgressMessage {
