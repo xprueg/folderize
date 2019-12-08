@@ -3,7 +3,6 @@
 const fs = require("fs");
 const path = require("path");
 
-const file_lookup = require("./file_lookup.js");
 const progress = require("./utils/progress.js");
 const { LOADER } = progress.constants;
 const cli = require("./utils/console.js");
@@ -13,13 +12,6 @@ const uhash = require("./utils/hash.js");
 const glob_match = require("./utils/glob.js");
 
 class FileCopy {
-  static async create(src, dst, locale, exclude, is_full_indexed) {
-    return new FileCopy(
-      src, dst, locale, exclude,
-      await file_lookup.create(dst, is_full_indexed)
-    );
-  }
-
   constructor(src, dst, locale, exclude, lookup) {
     this.src = src;
     this.dst = dst;

@@ -1,6 +1,7 @@
 "use strict";
 
 const cap = require("./utils/console_arg_parser.js")(process.argv);
+const file_lookup = require("./file_lookup.js");
 const file_copy = require("./file_copy.js");
 
 cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: true });
@@ -11,7 +12,11 @@ cap.flag("--nofullindex", { alias: "-n" });
 const args = cap.parse();
 
 function folderize(input, output, locale, exclude, is_full_indexed) {
-  file_copy.create(input, output, locale, exclude, is_full_indexed);
+  new file_copy(
+    input, output,
+    locale, exclude,
+    new file_lookup(output, is_full_indexed)
+  );
 }
 
 folderize(
