@@ -23,20 +23,15 @@ class FileCopy {
       year: new Intl.DateTimeFormat(locale, { year: "numeric" })
     };
 
+    this.progress = null;
     this.init();
   }
 
   init() {
     this.src.forEach(src => {
-      cli.log(`← Copying files from [u]${src}[/u].`, LEADING_SPACE);
+      const stats = ufs.get_folder_stats(src);
 
-      this.folder_stats = ufs.get_folder_stats(src);
-      cli.log(
-        `\x20\x20Found ${this.folder_stats.files} file(s) in ` +
-        `${this.folder_stats.dirs} directories.`
-      );
-
-      this.progress = progress.to(this.folder_stats.files)
+      this.progress = progress.to(stats.files)
         .loader(LOADER, "\x20\x20")
         .msg("Copied %P% (%C/%T)")
         .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
@@ -44,10 +39,15 @@ class FileCopy {
         .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
         .msg(", done.", tokens => tokens.P === 100);
 
+      cli.log(
+        `← Copying files from [u]${src}[/u].\n` +
+        `\x20\x20Found ${stats.files} file(s) in ` +
+        `${stats.dirs} directories.`,
+        LEADING_SPACE
+      );
+
       this.copy_folder(src);
     });
-
-    console.log(String());
   }
 
   copy_folder(src_folder) {
