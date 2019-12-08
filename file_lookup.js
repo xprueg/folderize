@@ -73,6 +73,7 @@ class FileLookup {
         this.index = cache;
         return constants.CACHE_HIT;
       } else {
+        fs.unlinkSync(path.join(root, constants.CACHE_NAME));
         return constants.CACHE_MISS;
       }
     } catch(e) {
