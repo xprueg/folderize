@@ -24,7 +24,7 @@ class FileLookup {
     this.stats = ufs.get_folder_stats(root);
 
     this.indexed_dirs = [];
-    this.index = [];
+    this.index = {};
 
     if (this.is_index_cached) {
       const res = this._load_index_from_cache(this.root);
@@ -54,8 +54,13 @@ class FileLookup {
 
   _save_index_to_cache() {
     if (this.is_index_cached) {
-      const cache = this.index.join("\n");
-      fs.writeFileSync(path.join(this.root, constants.CACHE_NAME), cache);
+      const cachefile =  path.join(this.root, constants.CACHE_NAME);
+      const data = Object.entries(this.index).reduce(
+        (a, f) => `${a}${f.join("\x20")}\n`,
+        String()
+      );
+
+      fs.writeFileSync(cachefile, data);
     }
   }
 
@@ -70,7 +75,12 @@ class FileLookup {
       --this.stats.files;
 
       if (cache.length > 0 && cache.length === this.stats.files) {
-        this.index = cache;
+        this.index = cache.reduce((c, line) => {
+          const [hash, filepath] = line.split("\x20");
+          c[hash] = filepath;
+          return c;
+        }, Object());
+
         return constants.CACHE_HIT;
       } else {
         fs.unlinkSync(path.join(root, constants.CACHE_NAME));
@@ -91,7 +101,7 @@ class FileLookup {
         return void this._index_files(path.join(root, file.name));
       }
 
-      this.add_hash(uhash.sync(path.join(root, file.name)));
+      this.push(path.join(root, file.name));
       this.progress.step();
     });
   }
@@ -110,20 +120,31 @@ class FileLookup {
         return void this.index_dir(path.join(root, file.name));
       }
 
-      this.add_hash(uhash.sync(path.join(root, file.name)));
+      this.push(path.join(root, file.name));
     });
 
     this.indexed_dirs.push(root);
   }
 
-  add_hash(hash) {
-    if (!this.index.includes(hash)) {
-      this.index.push(hash);
-    }
+  /**
+   * Adds the given file to the lookup if it's not included.
+   * @param {string} filepath The absolute path to the file.
+   * @returns {void}
+   */
+  push(filepath) {
+    const hash = uhash.sync(filepath);
+
+    if (hash in this.index === false)
+      this.index[hash] = path.relative(this.root, filepath);
   }
 
+  /**
+   * Returns whether the lookup contains the hash.
+   * @param {string} hash The hash to check.
+   * @returns {bool}
+   */
   contains(hash) {
-    return this.index.includes(hash);
+    return hash in this.index;
   }
 }
 

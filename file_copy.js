@@ -102,7 +102,7 @@ class FileCopy {
         }
       } while (!is_copied);
 
-      this.dst_lookup.add_hash(src_hash);
+      this.dst_lookup.push(dst_path_unique);
       this.progress.step();
     });
   }
