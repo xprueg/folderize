@@ -27,22 +27,20 @@ export default class FileCopy {
   }
 
   init() {
-    this.src.forEach(src => {
-      const stats = ufs.get_folder_stats(src);
+    const stats = ufs.get_folder_stats(this.src);
 
-      this.progress = progress.to(stats.files)
-        .loader(LOADER, "\x20\x20")
-        .msg("Copied %P% (%C/%T)")
-        .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
-        .msg(", Excluded %EXCLF file(s)", tokens => tokens.hasOwnProperty("EXCLF"))
-        .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
-        .msg(", done.", tokens => tokens.P === 100);
+    this.progress = progress.to(stats.files)
+      .loader(LOADER, "\x20\x20")
+      .msg("Copied %P% (%C/%T)")
+      .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
+      .msg(", Excluded %EXCLF file(s)", tokens => tokens.hasOwnProperty("EXCLF"))
+      .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
+      .msg(", done.", tokens => tokens.P === 100);
 
-      println(`← Copying files from [u]${src}[/u].`);
-      println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
+    println(`← Copying files from [u]${this.src}[/u].`);
+    println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
 
-      this.copy_folder(src);
-    });
+    this.copy_folder(this.src);
   }
 
   copy_folder(src_folder) {

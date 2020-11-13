@@ -16,18 +16,21 @@ cap.flag("--cacheindex", { alias: "-c" });
 cap.flag("--verify", { alias: "-v" });
 const args = cap.parse();
 
-!function folderize(input, output, locale, exclude, is_full_indexed, is_index_cached) {
+!function folderize(inputs, output, locale, exclude, is_full_indexed, is_index_cached) {
   println(String());
 
   if (args.verify) {
-    verify(input, exclude, new file_lookup(output, true, false));
+    verify(inputs, exclude, new file_lookup(output, true, false));
   } else {
     const lookup = new file_lookup(output, is_full_indexed, is_index_cached);
+
     println(String());
-    const copy = new file_copy(input, output, locale, exclude, lookup);
+
+    for (let input of inputs) {
+      new file_copy(input, output, locale, exclude, lookup);
+      println(String());
+    }
 
     lookup.flush();
   }
-
-  println(String());
 }(args.input, args.output, args.locale, args.exclude, !args.nofullindex, args.cacheindex);
