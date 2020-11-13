@@ -1,7 +1,4 @@
-"use strict";
-
-import { log, constants } from "./console.mjs";
-const { NOOP, OVERWRITE_LINE } = constants;
+import { println, printover } from "./console.mjs";
 
 export default class Progress {
   static to(val, options = {}) {
@@ -101,7 +98,10 @@ export default class Progress {
         message = this.loader_msg.done + message;
       }
 
-      log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE);
+      this.current_step === 0
+        ? println(message)
+        : printover(message);
+
       this.current_step += this.single_step;
     }
   }

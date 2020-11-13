@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { log, constants } from "./console.mjs";
-const { LEADING_SPACE } = constants;
+import { println } from "./console.mjs";
 import { hex_hash_sync } from "./hash.mjs";
 import glob_match from "./glob.mjs";
 
@@ -13,16 +12,14 @@ export default function verify(input, exclude, lookup) {
     verify_dir(root, exclude, lookup, files_not_copied);
   });
 
+  println(String());
+
   if (files_not_copied.length === 0) {
-    log(
-      "○\x20All files from the input(s) exist in the output.",
-      LEADING_SPACE
-    );
+    println("○\x20All files from the input(s) exist in the output.");
   } else {
-    log(
+    println(
       `\x20\x20Missing the following ${files_not_copied.length} file(s) in the output folder:\n` +
-      `× ${files_not_copied.join("\n •")}`,
-      LEADING_SPACE
+      `× ${files_not_copied.join("\n •")}`
     );
   }
 }

@@ -5,8 +5,7 @@ import path from "path";
 
 import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
-import { log, constants } from "./utils/console.mjs";
-const { LEADING_SPACE } = constants;
+import { println } from "./utils/console.mjs";
 import ufs from "./utils/fs.mjs";
 import { hex_hash_sync } from "./utils/hash.mjs";
 import glob_match from "./utils/glob.mjs";
@@ -39,12 +38,8 @@ export default class FileCopy {
         .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
         .msg(", done.", tokens => tokens.P === 100);
 
-      log(
-        `← Copying files from [u]${src}[/u].\n` +
-        `\x20\x20Found ${stats.files} file(s) in ` +
-        `${stats.dirs} directories.`,
-        LEADING_SPACE
-      );
+      println(`← Copying files from [u]${src}[/u].`);
+      println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
 
       this.copy_folder(src);
     });

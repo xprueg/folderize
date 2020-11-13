@@ -1,78 +1,42 @@
-"use strict";
+import { moveCursor, clearLine } from "readline";
+import fmt_ansi_esc_codes from "./fmt_ansi_esc.mjs";
 
-import readline from "readline";
-
-const ansi_esc_code = {
-  // Reset
-  reset: "\x1B[0m",
-
-  // Formatting
-  b: "\x1B[1m",
-  f: "\x1B[2m",
-  i: "\x1B[3m",
-  u: "\x1B[4m",
-  r: "\x1B[7m",
-
-  // Color
-  cblack: "\x1B[30m",
-  cr: "\x1B[31m",
-  cg: "\x1B[32m",
-  cy: "\x1B[33m",
-  cb: "\x1B[34m",
-  cm: "\x1B[35m",
-  cc: "\x1B[36m",
-  cwhite: "\x1B[37m",
-
-  // Background
-  cblackb: "\x1B[40m",
-  crb: "\x1B[41m",
-  cgb: "\x1B[42m",
-  cyb: "\x1B[43m",
-  cbb: "\x1B[44m",
-  cmb: "\x1B[45m",
-  ccb: "\x1B[46m",
-  cwhiteb: "\x1B[47m"
-};
-
-export const constants = {
-  NOOP: 0,
-  LEADING_SPACE: 1 << 0,
-  OVERWRITE_LINE: 1 << 1
-};
-
-const timestamp_formatter = new Intl.DateTimeFormat("en-US", {
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: false
-});
-
-const get_timestamp = () => {
-  return timestamp_formatter.format(Date.now());
+/**
+ * Returns a formatted timestamp.
+ * @returns {string}
+ */
+function get_timestamp() {
+    return get_timestamp.formatter.format(Date.now());
 }
 
-export const log = (msg, options = constants.NOOP) => {
-  const timestamp = `\x1B[2m${get_timestamp()}\x1B[0m `;
-
-  if (options & constants.LEADING_SPACE) {
-    console.log(String());
-  }
-
-  if (options & constants.OVERWRITE_LINE) {
-    readline.moveCursor(process.stdin, 0, -1);
-    readline.clearLine(process.stdin, 0);
-  }
-
-  let esc_code_stack = [];
-  msg.replace(/\[(\/?[a-z]*)\]/g, (m, cmd) => {
-    if (ansi_esc_code.hasOwnProperty(cmd)) {
-      esc_code_stack.push(ansi_esc_code[cmd]);
-      return ansi_esc_code[cmd];
-    } else if (cmd[0] === "/") {
-      esc_code_stack.pop();
-      return `${ansi_esc_code.reset}${esc_code_stack.join("")}`;
-    } else {
-      return m;
+/** @member {DateTimeFormat} */
+get_timestamp.formatter = new Intl.DateTimeFormat(
+    "en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
     }
-  }).split("\n").forEach(line => void console.log(timestamp + line));
-};
+);
+
+/**
+ * Prints to stdout.
+ * A timestamp will be prepended if [msg] is defined.
+ * @param {string} [msg] - The message to be printed.
+ */
+export function println(msg) {
+  if (msg)
+    msg = `[f]${get_timestamp()}[/f]\x20` + msg;
+
+  console.log(fmt_ansi_esc_codes(msg));
+}
+
+/**
+ * Prints to stdout over the cleared previous line.
+ * @param {string} [msg] - The message to be printed.
+ */
+export function printover(msg) {
+  moveCursor(process.stdin, 0, -1);
+  clearLine(process.stdin, 0);
+  println(msg);
+}

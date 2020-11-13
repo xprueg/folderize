@@ -4,6 +4,7 @@ import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
 import file_lookup from "./file_lookup.mjs";
 import file_copy from "./file_copy.mjs";
 import verify from "./utils/verify.mjs";
+import { println } from "./utils/console.mjs";
 
 const cap = new ConsoleArgumentParser(process.argv);
 cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: true });
@@ -16,14 +17,17 @@ cap.flag("--verify", { alias: "-v" });
 const args = cap.parse();
 
 !function folderize(input, output, locale, exclude, is_full_indexed, is_index_cached) {
+  println(String());
+
   if (args.verify) {
     verify(input, exclude, new file_lookup(output, true, false));
   } else {
     const lookup = new file_lookup(output, is_full_indexed, is_index_cached);
+    println(String());
     const copy = new file_copy(input, output, locale, exclude, lookup);
 
     lookup.flush();
   }
 
-  console.log(String());
+  println(String());
 }(args.input, args.output, args.locale, args.exclude, !args.nofullindex, args.cacheindex);

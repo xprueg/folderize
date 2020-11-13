@@ -5,8 +5,7 @@ import path from "path";
 
 import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
-import { log, constants as cli_constants } from "./utils/console.mjs";
-const { LEADING_SPACE } = cli_constants;
+import { println } from "./utils/console.mjs";
 import ufs from "./utils/fs.mjs";
 import { hex_hash_sync } from "./utils/hash.mjs";
 
@@ -30,7 +29,7 @@ export default class FileLookup {
       const res = this._load_index_from_cache(this.root);
 
       if (res & constants.CACHE_HIT) {
-        log(`← Restored file lookup from cache.`, LEADING_SPACE);
+        println("← Restored file lookup from cache.");
         return;
       }
     }
@@ -41,12 +40,8 @@ export default class FileLookup {
         .msg("Indexed %P% (%C/%T)")
         .msg(", done.", tokens => tokens.P === 100);
 
-      log(
-        `→ Creating file lookup for [u]${this.root}[/u].\n` +
-        `\x20\x20Found ${this.stats.files} file(s) in ` +
-        `${this.stats.dirs} directories.`,
-        LEADING_SPACE
-      );
+      println(`→ Creating file lookup for [u]${this.root}[/u].`);
+      println(`\x20\x20Found ${this.stats.files} file(s) in ${this.stats.dirs} directories.`);
 
       this._index_files(this.root);
     }
