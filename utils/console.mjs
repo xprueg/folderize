@@ -1,6 +1,6 @@
 "use strict";
 
-const readline = require("readline");
+import readline from "readline";
 
 const ansi_esc_code = {
   // Reset
@@ -34,7 +34,7 @@ const ansi_esc_code = {
   cwhiteb: "\x1B[47m"
 };
 
-const constants = {
+export const constants = {
   NOOP: 0,
   LEADING_SPACE: 1 << 0,
   OVERWRITE_LINE: 1 << 1
@@ -51,7 +51,7 @@ const get_timestamp = () => {
   return timestamp_formatter.format(Date.now());
 }
 
-const log = (msg, options = constants.NOOP) => {
+export const log = (msg, options = constants.NOOP) => {
   const timestamp = `\x1B[2m${get_timestamp()}\x1B[0m `;
 
   if (options & constants.LEADING_SPACE) {
@@ -75,9 +75,4 @@ const log = (msg, options = constants.NOOP) => {
       return m;
     }
   }).split("\n").forEach(line => void console.log(timestamp + line));
-};
-
-module.exports = {
-  log: log,
-  constants: constants
 };

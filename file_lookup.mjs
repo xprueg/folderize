@@ -1,14 +1,14 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const progress = require("./utils/progress.js");
+import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
-const cli = require("./utils/console.js");
-const { LEADING_SPACE } = cli.constants;
-const ufs = require("./utils/fs.js");
-const uhash = require("./utils/hash.js");
+import { log, constants as cli_constants } from "./utils/console.mjs";
+const { LEADING_SPACE } = cli_constants;
+import ufs from "./utils/fs.mjs";
+import { hex_hash_sync } from "./utils/hash.mjs";
 
 const constants = {
   CACHE_NAME: ".folderize.cache",
@@ -16,7 +16,7 @@ const constants = {
   CACHE_MISS: 1 << 1
 }
 
-class FileLookup {
+export default class FileLookup {
   constructor(root, is_full_indexed, is_index_cached) {
     this.root = root;
     this.is_full_indexed = is_full_indexed;
@@ -30,7 +30,7 @@ class FileLookup {
       const res = this._load_index_from_cache(this.root);
 
       if (res & constants.CACHE_HIT) {
-        cli.log(`← Restored file lookup from cache.`, LEADING_SPACE);
+        log(`← Restored file lookup from cache.`, LEADING_SPACE);
         return;
       }
     }
@@ -41,7 +41,7 @@ class FileLookup {
         .msg("Indexed %P% (%C/%T)")
         .msg(", done.", tokens => tokens.P === 100);
 
-      cli.log(
+      log(
         `→ Creating file lookup for [u]${this.root}[/u].\n` +
         `\x20\x20Found ${this.stats.files} file(s) in ` +
         `${this.stats.dirs} directories.`,
@@ -132,7 +132,7 @@ class FileLookup {
    * @returns {void}
    */
   push(filepath) {
-    const hash = uhash.sync(filepath);
+    const hash = hex_hash_sync(filepath);
 
     if (hash in this.index === false)
       this.index[hash] = path.relative(this.root, filepath);
@@ -147,5 +147,3 @@ class FileLookup {
     return hash in this.index;
   }
 }
-
-module.exports = FileLookup;

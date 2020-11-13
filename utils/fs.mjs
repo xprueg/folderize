@@ -1,9 +1,9 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-class FileSystemUtil {
+export default class FileSystemUtil {
   static get_folder_stats(root) {
     let stat = {
       dirs: 0,
@@ -43,5 +43,3 @@ class FileSystemUtil {
     return unique;
   }
 }
-
-module.exports = exports = FileSystemUtil;

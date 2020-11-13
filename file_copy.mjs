@@ -1,17 +1,17 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const progress = require("./utils/progress.js");
+import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
-const cli = require("./utils/console.js");
-const { LEADING_SPACE } = cli.constants;
-const ufs = require("./utils/fs.js");
-const uhash = require("./utils/hash.js");
-const glob_match = require("./utils/glob.js");
+import { log, constants } from "./utils/console.mjs";
+const { LEADING_SPACE } = constants;
+import ufs from "./utils/fs.mjs";
+import { hex_hash_sync } from "./utils/hash.mjs";
+import glob_match from "./utils/glob.mjs";
 
-class FileCopy {
+export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup) {
     this.src = src;
     this.dst = dst;
@@ -39,7 +39,7 @@ class FileCopy {
         .msg(", Excluded %EXCLD dir(s)", tokens => tokens.hasOwnProperty("EXCLD"))
         .msg(", done.", tokens => tokens.P === 100);
 
-      cli.log(
+      log(
         `← Copying files from [u]${src}[/u].\n` +
         `\x20\x20Found ${stats.files} file(s) in ` +
         `${stats.dirs} directories.`,
@@ -62,7 +62,7 @@ class FileCopy {
       }
 
       const src_path = path.join(src_folder, file.name);
-      const src_hash = uhash.sync(src_path);
+      const src_hash = hex_hash_sync(src_path);
       const src_stat = fs.lstatSync(src_path);
       const src_mtime_date = new Date(src_stat.mtime);
       const src_date = {
@@ -107,5 +107,3 @@ class FileCopy {
     });
   }
 }
-
-module.exports = FileCopy;

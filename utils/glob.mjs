@@ -1,5 +1,5 @@
 // https://github.com/torvalds/linux/blob/6f0d349d922ba44e4348a17a78ea51b7135965b1/lib/glob.c
-function glob_match(pattern, string) {
+export default function glob_match(pattern, string) {
   let pattern_pos = 0;
   let string_pos = 0;
   let backtrack_pattern_pos = false;
@@ -47,5 +47,3 @@ function glob_match(pattern, string) {
     }
   }
 }
-
-module.exports = glob_match;

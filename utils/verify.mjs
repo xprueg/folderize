@@ -1,12 +1,12 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const cli = require("./console.js");
-const { LEADING_SPACE } = cli.constants;
-const uhash = require("./hash.js");
-const glob_match = require("./glob.js");
+import { log, constants } from "./console.mjs";
+const { LEADING_SPACE } = constants;
+import { hex_hash_sync } from "./hash.mjs";
+import glob_match from "./glob.mjs";
 
-function verify(input, exclude, lookup) {
+export default function verify(input, exclude, lookup) {
   let files_not_copied = [];
 
   input.forEach(root => {
@@ -14,12 +14,12 @@ function verify(input, exclude, lookup) {
   });
 
   if (files_not_copied.length === 0) {
-    cli.log(
+    log(
       "○\x20All files from the input(s) exist in the output.",
       LEADING_SPACE
     );
   } else {
-    cli.log(
+    log(
       `\x20\x20Missing the following ${files_not_copied.length} file(s) in the output folder:\n` +
       `× ${files_not_copied.join("\n •")}`,
       LEADING_SPACE
@@ -40,10 +40,8 @@ function verify_dir(root, exclude, lookup, files_not_copied) {
       return void verify_dir(file_path, exclude, lookup, files_not_copied);
     }
 
-    if (!lookup.contains(uhash.sync(file_path))) {
+    if (!lookup.contains(hex_hash_sync(file_path))) {
       files_not_copied.push(file_path);
     }
   });
 }
-
-module.exports = verify;

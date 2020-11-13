@@ -33,7 +33,7 @@ class ConsoleArgument {
   }
 }
 
-class ConsoleArgumentParser {
+export default class ConsoleArgumentParser {
   constructor(argv) {
     this.node_exec = argv.shift();
     this.src_file = argv.shift();
@@ -180,7 +180,3 @@ class ConsoleArgumentParser {
     }
   }
 }
-
-module.exports = exports = argv => {
-  return new ConsoleArgumentParser(argv);
-};

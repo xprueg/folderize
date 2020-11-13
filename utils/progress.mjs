@@ -1,9 +1,9 @@
 "use strict";
 
-const cli = require("./console.js");
-const { NOOP, OVERWRITE_LINE } = cli.constants;
+import { log, constants } from "./console.mjs";
+const { NOOP, OVERWRITE_LINE } = constants;
 
-class Progress {
+export default class Progress {
   static to(val, options = {}) {
     return new Progress(0, val, options);
   }
@@ -101,7 +101,7 @@ class Progress {
         message = this.loader_msg.done + message;
       }
 
-      cli.log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE);
+      log(message, this.current_step === 0 ? NOOP : OVERWRITE_LINE);
       this.current_step += this.single_step;
     }
   }
@@ -128,5 +128,3 @@ class ProgressMessage {
     }
   }
 }
-
-module.exports = Progress;

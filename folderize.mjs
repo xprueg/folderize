@@ -1,10 +1,11 @@
 "use strict";
 
-const cap = require("./utils/console_arg_parser.js")(process.argv);
-const file_lookup = require("./file_lookup.js");
-const file_copy = require("./file_copy.js");
-const verify = require("./utils/verify.js");
+import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
+import file_lookup from "./file_lookup.mjs";
+import file_copy from "./file_copy.mjs";
+import verify from "./utils/verify.mjs";
 
+const cap = new ConsoleArgumentParser(process.argv);
 cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: true });
 cap.define("--output", { alias: "-o", default: "./" });
 cap.define("--locale", { alias: "-l", default: "en-US" });
