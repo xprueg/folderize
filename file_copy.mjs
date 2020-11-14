@@ -67,10 +67,6 @@ export default class FileCopy {
       const dst_folder = path.join(this.dst, src_date.year, src_date.month, src_date.day);
       const dst_path = path.join(dst_folder, file.name);
 
-      if (!this.dst_lookup.is_full_indexed) {
-        this.dst_lookup.index_dir(dst_folder);
-      }
-
       if (this.dst_lookup.contains(src_hash)) {
         return void this.progress.update("SKP", +1).step();
       }
