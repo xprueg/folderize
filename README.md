@@ -6,7 +6,7 @@ The folderize utility copies files from multiple sources into a single destinati
 
 ## Synopsis
 
-<pre><b>folderize</b> [<b>-nc</b>] <b>--input</b> <ins>PATH</ins> <ins>...</ins> [<b>--output</b> <ins>PATH</ins>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>GLOB</ins> <ins>...</ins>]</pre>
+<pre><b>folderize</b> [<b>-n</b>] <b>--input</b> <ins>PATH</ins> <ins>...</ins> [<b>--output</b> <ins>PATH</ins>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>GLOB</ins> <ins>...</ins>]</pre>
 
 ## Options
 
@@ -22,13 +22,5 @@ The folderize utility copies files from multiple sources into a single destinati
 <div><code><b>--exclude</b>, <b>-e</b> <ins>GLOB</ins> <ins>...</ins></code></div>
 <dl><dd>The files and/or folders names which shall not be copied.&nbsp;&nbsp;Supported glob patterns are * and ?.&nbsp;&nbsp;`*' will match dotfiles.</pre></dd></dl>
 
-<div><code><b>--nofullindex</b>, <b>-n</b></code></div>
-<dl><dd>Prevent indexing of the complete destination folder, folders are indexed when needed.&nbsp;&nbsp;Useful to speed up execution if you only need to add a few files.&nbsp;&nbsp;This will not prevent duplicates across the whole destination folder.</dd></dl>
-
-<div><code><b>--cacheindex</b>, <b>-c</b></code></div>
-<dl><dd>Saves or updates the created index in the output folder as `.folderize.cache' to skip the expensive indexing on recurring runs.</dd></dl>
-
-## Todo
-
-- [ ] Support [] and [!] pattern matching in --exclude.
-- [ ] Add more test cases.
+<div><code><b>--nocache</b>, <b>-n</b></code></div>
+<dl><dd>Disables the creation/use of the cache file `folderize.cache'. The file index will be rebuild from scratch.</dd></dl>

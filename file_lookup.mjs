@@ -16,25 +16,22 @@ const constants = {
 }
 
 export default class FileLookup {
-  constructor(root, is_full_indexed, is_index_cached) {
+  constructor(root, use_cache) {
     this.root = root;
-    this.is_full_indexed = is_full_indexed;
-    this.is_index_cached = is_index_cached;
+    this.use_cache = use_cache;
     this.stats = ufs.get_folder_stats(root);
 
     this.indexed_dirs = [];
     this.index = {};
 
-    if (this.is_index_cached) {
+    if (this.use_cache) {
       const res = this._load_index_from_cache(this.root);
 
-      if (res & constants.CACHE_HIT) {
-        println("← Restored file lookup from cache.");
-        return;
-      }
+      if (res & constants.CACHE_HIT)
+        return void println("← Restored file lookup from cache.");
     }
 
-    if (fs.existsSync(this.root) && this.stats.files > 0 && this.is_full_indexed) {
+    if (fs.existsSync(this.root) && this.stats.files > 0) {
       this.progress = progress.to(this.stats.files)
         .loader(LOADER, "\x20\x20")
         .msg("Indexed %P% (%C/%T)")
@@ -48,15 +45,13 @@ export default class FileLookup {
   }
 
   _save_index_to_cache() {
-    if (this.is_index_cached) {
-      const cachefile =  path.join(this.root, constants.CACHE_NAME);
-      const data = Object.entries(this.index).reduce(
-        (a, f) => `${a}${f.join("\x20")}\n`,
-        String()
-      );
+    const cachefile =  path.join(this.root, constants.CACHE_NAME);
+    const data = Object.entries(this.index).reduce(
+      (a, f) => `${a}${f.join("\x20")}\n`,
+      String()
+    );
 
-      fs.writeFileSync(cachefile, data);
-    }
+    fs.writeFileSync(cachefile, data);
   }
 
   _load_index_from_cache(root) {
@@ -102,7 +97,8 @@ export default class FileLookup {
   }
 
   flush() {
-    this._save_index_to_cache();
+    if (this.use_cache)
+      this._save_index_to_cache();
   }
 
   index_dir(root) {
