@@ -3,7 +3,6 @@ import fs from "fs";
 import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
 import Lookup from "./file_lookup.mjs";
 import file_copy from "./file_copy.mjs";
-import verify from "./utils/verify.mjs";
 import { println, eprintln } from "./utils/console.mjs";
 import ufs from "./utils/fs.mjs";
 import Progress from "./utils/progress.mjs";
@@ -14,7 +13,6 @@ cap.define("--output", { alias: "-o", default: "./" });
 cap.define("--locale", { alias: "-l", default: "en-US" });
 cap.define("--exclude", { alias: "-e", expected_values: Infinity });
 cap.flag("--nocache", { alias: "-n" });
-cap.flag("--verify", { alias: "-v" });
 const args = cap.parse();
 
 const settings = {
@@ -27,9 +25,6 @@ const destination = args.output;
 const lookup = Lookup.new(destination);
 
 (() => {
-  if (args.verify)
-    settings.use_cachefile = false;
-
   println("");
 
   if (settings.use_cachefile && fs.existsSync(lookup.get_cachefile())) {
@@ -71,9 +66,6 @@ const lookup = Lookup.new(destination);
     if (err)
       return void eprintover(`! Failed to generate the in-memory cache. (${err})\n`);
   }
-
-  if (args.verify)
-    return void verify(sources, settings.exclude, lookup);
 
   println("");
 
