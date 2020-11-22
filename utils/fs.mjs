@@ -28,6 +28,38 @@ export default class FileSystemUtil {
     return stat;
   }
 
+  /**
+   * Returns a list of all filepaths contained in the given directory.
+   * @param {string} dir - The directory to query.
+   * @returns {[string|null, string[]]} Error message or null on success.
+   */
+  static query_files(dir) {
+    if (!dir)
+      return ["Param <dir> is mandatory."];
+
+    let dirents = [];
+    try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
+    catch (err) { return [err.code] }
+
+    let files = Array();
+    for (let dirent of dirents) {
+      const fullname = path.join(dir, dirent.name);
+
+      if (dirent.isDirectory()) {
+        const [err, recursive_files] = FileSystemUtil.query_files(fullname);
+
+        if (err)
+          return [err];
+
+        files = files.concat(recursive_files);
+      } else {
+        files.push(fullname);
+      }
+    };
+
+    return [null, files];
+  }
+
   static get_unique_filename(filepath) {
     let rename_tries = 0;
     let unique = filepath;
