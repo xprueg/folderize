@@ -51,10 +51,10 @@ const regex = new RegExp(
 
 /**
  * Replaces tags with the appropriate ansi escape sequence.
- * @param {string} [msg] - The message to be formatted.
+ * @param {string} [msg=""] - The message to be formatted.
  * @returns {string}
  */
-export default function fmt_ansi_esc_codes(msg) {
+export default function fmt_ansi_esc_codes(msg = String()) {
   let stack = [];
   return msg.replace(regex, (_, tag) => {
     if (tag[0] !== "/") {

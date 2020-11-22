@@ -22,11 +22,11 @@ get_timestamp.formatter = new Intl.DateTimeFormat(
 /**
  * Prints to stdout.
  * A timestamp will be prepended if [msg] is defined.
- * @todo Don't throw if msg is undefined.
- * @param {string} [msg] - The message to be printed.
+ * @param {string} [msg=""] - The message to be printed.
+ * @returns {void}
  */
-export function println(msg) {
-  if (msg)
+export function println(msg = String()) {
+  if (msg !== String())
     msg = `[f]${get_timestamp()}[/f]\x20` + msg;
 
   console.log(fmt_ansi_esc_codes(msg));
@@ -35,11 +35,11 @@ export function println(msg) {
 /**
  * Prints to stderr.
  * A timestamp will be prepended if [msg] is defined.
- * @todo Don't throw if msg is undefined.
- * @param {string} [msg] - The message to be printed.
+ * @param {string} [msg=""] - The message to be printed.
+ * @returns {void}
  */
-export function eprintln(msg) {
-  if (msg)
+export function eprintln(msg = String()) {
+  if (msg !== String())
     msg = `[f]${get_timestamp()}[/f]\x20` + msg;
 
   console.error(fmt_ansi_esc_codes(msg));
@@ -47,9 +47,10 @@ export function eprintln(msg) {
 
 /**
  * Prints to stdout over the cleared previous line.
- * @param {string} [msg] - The message to be printed.
+ * @param {string} [msg=""] - The message to be printed.
+ * @returns {void}
  */
-export function printover(msg) {
+export function printover(msg = String()) {
   moveCursor(process.stdin, 0, -1);
   clearLine(process.stdin, 0);
   println(msg);
