@@ -1,140 +1,188 @@
-"use strict";
-
 import fs from "fs";
 import path from "path";
+import os from "os";
 
-import progress from "./utils/progress.mjs";
-const { LOADER } = progress.constants;
-import { println } from "./utils/console.mjs";
 import ufs from "./utils/fs.mjs";
 import { hex_hash_sync } from "./utils/hash.mjs";
 
-const constants = {
-  CACHE_NAME: ".folderize.cache",
-  CACHE_HIT: 1 << 0,
-  CACHE_MISS: 1 << 1
-}
+export default class Lookup {
+  static #CACHEFILENAME = ".folderize.cache";
 
-export default class FileLookup {
-  constructor(root, use_cache) {
-    this.root = root;
-    this.use_cache = use_cache;
-    this.stats = ufs.get_folder_stats(root);
+  #root;
+  #cachefile;
+  #index = new Map();
 
-    this.indexed_dirs = [];
-    this.index = {};
-
-    if (this.use_cache) {
-      const res = this._load_index_from_cache(this.root);
-
-      if (res & constants.CACHE_HIT)
-        return void println("← Restored file lookup from cache.");
-    }
-
-    if (fs.existsSync(this.root) && this.stats.files > 0) {
-      this.progress = progress.to(this.stats.files)
-        .loader(LOADER, "\x20\x20")
-        .msg("Indexed %P% (%C/%T)")
-        .msg(", done.", tokens => tokens.P === 100);
-
-      println(`→ Creating file lookup for [u]${this.root}[/u].`);
-      println(`\x20\x20Found ${this.stats.files} file(s) in ${this.stats.dirs} directories.`);
-
-      this._index_files(this.root);
-    }
+  constructor(root) {
+    this.#root = path.resolve(root);
+    this.#cachefile = path.join(root, Lookup.#CACHEFILENAME);
   }
 
-  _save_index_to_cache() {
-    const cachefile =  path.join(this.root, constants.CACHE_NAME);
-    const data = Object.entries(this.index).reduce(
-      (a, f) => `${a}${f.join("\x20")}\n`,
-      String()
-    );
-
-    fs.writeFileSync(cachefile, data);
+  /**
+   * Returns a new Lookup instance.
+   * @param {string} root - The directory to cache.
+   * @returns {Lookup}
+   */
+  static new(root) {
+    return new Lookup(root);
   }
 
-  _load_index_from_cache(root) {
+  /**
+   * Returns the absolute path to the cachefile.
+   * @returns {string}
+   */
+  get_cachefile() {
+    return this.#cachefile;
+  }
+
+  /**
+   * Load and parse the cachefile.
+   * Overwrites the index.
+   * @returns {string|null} Error message or null on success.
+   */
+  load_cachefile() {
+    let tmp = new Map();
+    let cachefile_lines;
+    let malformed_lines = Array();
+
     try {
-      const cache = fs
-        .readFileSync(path.join(root, constants.CACHE_NAME), { encoding: "utf-8" })
-        .split("\n")
-        .filter(line => line.length);
+      cachefile_lines = fs.readFileSync(this.#cachefile, "utf-8")
+                          .split(os.EOL)
+                          .filter(l => l.length > 0);
+    } catch (err) {
+      return err.code;
+    }
 
-      // Remove the cache file from the total output count.
-      --this.stats.files;
+    for (let line = 0; line < cachefile_lines.length; ++line) {
+      const [hash, rel_path] = cachefile_lines[line].split("\x20");
 
-      if (cache.length > 0 && cache.length === this.stats.files) {
-        this.index = cache.reduce((c, line) => {
-          const [hash, filepath] = line.split("\x20");
-          c[hash] = filepath;
-          return c;
-        }, Object());
+      if (hash && rel_path)
+        tmp.set(hash, rel_path);
+      else
+        malformed_lines.push(`#${line + 1}`);
+    }
 
-        return constants.CACHE_HIT;
-      } else {
-        fs.unlinkSync(path.join(root, constants.CACHE_NAME));
-        return constants.CACHE_MISS;
-      }
-    } catch(e) {
-      if (e.code === "ENOENT") {
-        return constants.CACHE_MISS;
-      }
-
-      throw e;
+    if (malformed_lines.length === 0) {
+      this.#index = tmp;
+      return null;
+    } else {
+      return "Malformed entries at line(s): " + malformed_lines.join(", ");
     }
   }
 
-  _index_files(root) {
-    fs.readdirSync(root, { withFileTypes: true }).forEach(file => {
-      if (file.isDirectory()) {
-        return void this._index_files(path.join(root, file.name));
+  /**
+   * Generate an index from all files in root.
+   * @param {function} [cb] - Will be called for every file.
+   * @returns {string|null} Error message or null on success.
+   */
+  generate(cb) {
+		return this.#index_files(this.#root, cb ? cb : () => {});
+  }
+
+  /**
+   * Index all files in root.
+   * @param {string} root
+   * @param {function} cb - Will be called for every file.
+   * @returns {string|null} Error message or null on success.
+   */
+  #index_files(root, cb) {
+    try {
+      const files = fs.readdirSync(root, { withFileTypes: true });
+
+      for (let file of files) {
+        const fullname = path.join(root, file.name);
+
+        if (file.isDirectory()) {
+          this.#index_files(fullname, cb);
+        } else {
+          cb(file.name);
+          this.push(fullname);
+        }
+      };
+    } catch(err) { return err.code; }
+
+    return null;
+  }
+
+	/**
+    * Update index against live folder.
+    * @todo Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
+    * @returns {[string|null, object]} Error message or null on success.
+    */
+  update() {
+    let diff = { added: [], removed: [], total: 0 };
+    let [err, live_dir] = ufs.query_files(this.#root);
+
+    if (err)
+      return [err];
+
+    // Filter live_dir to keep only files that are not in the index yet.
+    // Remove files from the index that cannot be found in the live directory anymore.
+    for (let [hash, rel_path] of this.#index) {
+      const search = live_dir.indexOf(path.join(this.#root, rel_path));
+
+      if (search !== -1) {  // Filepath exists.
+        live_dir.splice(search, 1);
+      } else {  // Filepath is invalid.
+        this.remove(hash);
+        diff.removed.push(rel_path);
       }
+    };
 
-      this.push(path.join(root, file.name));
-      this.progress.step();
-    });
-  }
-
-  flush() {
-    if (this.use_cache)
-      this._save_index_to_cache();
-  }
-
-  index_dir(root) {
-    if (!fs.existsSync(root) || this.indexed_dirs.includes(root)) {
-      return;
+    // Add the new files to the index.
+    for (let abs_path of live_dir) {
+      this.push(abs_path);
+      diff.added.push(abs_path);
     }
 
-    fs.readdirSync(root, { withFileTypes: true }).forEach(file => {
-      if (file.isDirectory()) {
-        return void this.index_dir(path.join(root, file.name));
-      }
+    diff.total = diff.added.length + diff.removed.length;
 
-      this.push(path.join(root, file.name));
-    });
-
-    this.indexed_dirs.push(root);
+    return [null, diff];
   }
 
   /**
    * Adds the given file to the lookup if it's not included.
-   * @param {string} filepath The absolute path to the file.
+   * @todo This might throw, handle this.
+   * @param {string} abs_path - The absolute path to the file.
    * @returns {void}
    */
-  push(filepath) {
-    const hash = hex_hash_sync(filepath);
+  push(abs_path) {
+    const hash = hex_hash_sync(abs_path);
 
-    if (hash in this.index === false)
-      this.index[hash] = path.relative(this.root, filepath);
+    if (!this.#index.has(hash))
+      this.#index.set(hash, path.relative(this.#root, abs_path));
+  }
+
+  /**
+   * Removes an entry from the lookup.
+   * @param {string} hash - The hash to remove.
+   * @returns {void}
+   */
+  remove(hash) {
+    this.#index.delete(hash);
   }
 
   /**
    * Returns whether the lookup contains the hash.
-   * @param {string} hash The hash to check.
+   * @param {string} hash - The hash to check.
    * @returns {bool}
    */
   contains(hash) {
-    return hash in this.index;
+    return this.#index.has(hash);
+  }
+
+  /**
+   * Saves the in-memory cache to disk.
+   * @returns {string|null} Error message or null on success.
+   */
+  save_cachefile() {
+    let data = String();
+
+    for (let [hash, rel_path] of this.#index)
+      data += (hash + "\x20" + rel_path + os.EOL);
+
+    try { fs.writeFileSync(this.#cachefile, data);
+    } catch (err) { return err.code; }
+
+    return null;
   }
 }
