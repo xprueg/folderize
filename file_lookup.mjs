@@ -75,7 +75,7 @@ export default class Lookup {
    * @returns {string|null} Error message or null on success.
    */
   generate(cb) {
-		return this.#index_files(this.#root, cb ? cb : () => {});
+    return this.#index_files(this.#root, cb ? cb : () => {});
   }
 
   /**
@@ -103,7 +103,7 @@ export default class Lookup {
     return null;
   }
 
-	/**
+  /**
     * Update index against live folder.
     * @todo Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
     * @returns {[string|null, object]} Error message or null on success.
