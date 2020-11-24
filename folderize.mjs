@@ -25,7 +25,7 @@ const destination = args.output;
 const lookup = Lookup.new(destination);
 
 (() => {
-  println("");
+  println();
 
   if (settings.use_cachefile && fs.existsSync(lookup.get_cachefile())) {
     const err = lookup.load_cachefile();
@@ -67,7 +67,7 @@ const lookup = Lookup.new(destination);
       return void eprintover(`! Failed to generate the in-memory cache. (${err})\n`);
   }
 
-  println("");
+  println();
 
   sources.forEach(src => {
     new file_copy(
@@ -75,7 +75,7 @@ const lookup = Lookup.new(destination);
       settings.locale, settings.exclude, lookup
     );
 
-    println("");
+    println();
   });
 
   if (settings.use_cachefile) {
@@ -88,5 +88,5 @@ const lookup = Lookup.new(destination);
     }
   }
 
-  println("");
+  println();
 })();
