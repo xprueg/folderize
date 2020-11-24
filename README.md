@@ -24,3 +24,12 @@ The folderize utility copies files from multiple sources into a single destinati
 
 <div><code><b>--nocache</b>, <b>-n</b></code></div>
 <dl><dd>Disables the creation/use of the cache file `folderize.cache'. The file index will be rebuild from scratch.</dd></dl>
+
+## Tests
+
+Test are written to be run with [mocha](https://mochajs.org).&nbsp;&nbsp;Test coverage is basically non-existent at the moment though and more tests need to be added in the future.
+
+```sh
+npm install mocha
+./node_modules/mocha/bin/mocha
+```
