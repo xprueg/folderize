@@ -55,7 +55,6 @@ export default class FileCopy {
       }
 
       const src_path = path.join(src_folder, file.name);
-      const src_hash = hex_hash_sync(src_path);
       const src_stat = fs.lstatSync(src_path);
       const src_mtime_date = new Date(src_stat.mtime);
       const src_date = {
@@ -67,7 +66,7 @@ export default class FileCopy {
       const dst_folder = path.join(this.dst, src_date.year, src_date.month, src_date.day);
       const dst_path = path.join(dst_folder, file.name);
 
-      if (this.dst_lookup.contains(src_hash)) {
+      if (this.dst_lookup.contains(path.relative(this.dst, src_path))) {
         return void this.progress.update("SKP", +1).step();
       }
 
