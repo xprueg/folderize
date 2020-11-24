@@ -60,6 +60,23 @@ export default class FileSystemUtil {
     return [null, files];
   }
 
+  /**
+   * Compare equality of files byte for byte.
+   * @param {string} a - Path to file a.
+   * @param {string} b - Path to file b.
+   * @returns {[string|null, bool]} Error message or null on success.
+   */
+  static bytes_equal(a, b) {
+    try {
+      const buff_a = fs.readFileSync(a);
+      const buff_b = fs.readFileSync(b);
+
+      return [null, buff_a.equals(buff_b)];
+    } catch(err) {
+      return [err.code];
+    }
+  }
+
   static get_unique_filename(filepath) {
     let rename_tries = 0;
     let unique = filepath;
