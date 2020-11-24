@@ -23,7 +23,7 @@ The folderize utility copies files from multiple sources into a single destinati
 <dl><dd>The files and/or folders names which shall not be copied.&nbsp;&nbsp;Supported glob patterns are * and ?.&nbsp;&nbsp;`*' will match dotfiles.</pre></dd></dl>
 
 <div><code><b>--nocache</b>, <b>-n</b></code></div>
-<dl><dd>Disables the creation/use of the cache file `folderize.cache'. The file index will be rebuild from scratch.</dd></dl>
+<dl><dd>Disables the creation/use of the cache file `folderize.cache'.&nbsp;&nbsp;The file index will be rebuild from scratch.</dd></dl>
 
 ## Tests
 
