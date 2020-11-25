@@ -10,6 +10,7 @@ import Progress from "./utils/progress.mjs";
 const cap = new ConsoleArgumentParser(process.argv);
 cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: true });
 cap.define("--output", { alias: "-o", default: "./" });
+cap.define("--dirstruct", { alias: "-d", default: "%Y/%B/%e" })
 cap.define("--locale", { alias: "-l", default: "en-US" });
 cap.define("--exclude", { alias: "-e", expected_values: Infinity });
 cap.flag("--nocache", { alias: "-n" });
@@ -18,7 +19,8 @@ const args = cap.parse();
 const settings = {
   exclude: args.exclude,
   locale: args.locale,
-  use_cachefile: !args.nocache
+  use_cachefile: !args.nocache,
+  dirstruct: args.dirstruct
 };
 const sources = args.input;
 const destination = args.output;
@@ -72,7 +74,7 @@ const lookup = Lookup.new(destination);
   sources.forEach(src => {
     new file_copy(
       src, destination,
-      settings.locale, settings.exclude, lookup
+      settings.locale, settings.exclude, lookup, settings.dirstruct
     );
 
     println();

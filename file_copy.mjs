@@ -11,15 +11,20 @@ import { hex_hash_sync } from "./utils/hash.mjs";
 import glob_match from "./utils/glob.mjs";
 
 export default class FileCopy {
-  constructor(src, dst, locale, exclude, lookup) {
+  constructor(src, dst, locale, exclude, lookup, dirstruct) {
     this.src = src;
     this.dst = dst;
     this.exclude = exclude;
     this.dst_lookup = lookup;
+    this.dirstruct = dirstruct;
     this.formatter = {
-      day: new Intl.DateTimeFormat(locale, { day: "numeric" }),
-      month: new Intl.DateTimeFormat(locale, { month: "long" }),
-      year: new Intl.DateTimeFormat(locale, { year: "numeric" })
+      e: new Intl.DateTimeFormat(locale, { day: "numeric" }),
+      d: new Intl.DateTimeFormat(locale, { day: "2-digit" }),
+      m: new Intl.DateTimeFormat(locale, { month: "2-digit" }),
+      b: new Intl.DateTimeFormat(locale, { month: "short" }),
+      B: new Intl.DateTimeFormat(locale, { month: "long" }),
+      Y: new Intl.DateTimeFormat(locale, { year: "numeric" }),
+      y: new Intl.DateTimeFormat(locale, { year: "2-digit" })
     };
 
     this.progress = null;
@@ -43,6 +48,15 @@ export default class FileCopy {
     this.copy_folder(this.src);
   }
 
+  get_dst_folder(mtime) {
+    const mtime_date = new Date(mtime);
+    const struct = this.dirstruct.replace(/%(\w)/g, (_, match) => {
+      return this.formatter[match].format(mtime_date);
+    })
+
+    return path.join(this.dst, struct);
+  }
+
   copy_folder(src_folder) {
     fs.readdirSync(src_folder, { withFileTypes: true }).forEach(file => {
       if (this.exclude &&
@@ -56,14 +70,7 @@ export default class FileCopy {
 
       const src_path = path.join(src_folder, file.name);
       const src_stat = fs.lstatSync(src_path);
-      const src_mtime_date = new Date(src_stat.mtime);
-      const src_date = {
-        day: this.formatter.day.format(src_mtime_date),
-        month: this.formatter.month.format(src_mtime_date),
-        year: this.formatter.year.format(src_mtime_date)
-      };
-
-      const dst_folder = path.join(this.dst, src_date.year, src_date.month, src_date.day);
+      const dst_folder = this.get_dst_folder(src_stat.mtime);
       const dst_path = path.join(dst_folder, file.name);
 
       if (this.dst_lookup.contains(path.relative(this.dst, src_path))) {
