@@ -132,19 +132,13 @@ export default class Lookup {
   remove(hash, rel_path) {
     const entries = this.#index.get(hash);
 
-    if (entries === undefined)
-      return [`<${hash}> cannot be removed because it does not exist.`]
+    if (entries === undefined || !entries.includes(rel_path))
+      return `<${rel_path} (${hash})> cannot be removed because it does not exist.`;
 
-    if (entries.length === 1) {
-      if (entries[0] !== rel_path)
-        return [`<${rel_path} (${hash})> cannot be removed because it does not exist.`];
-
+    if (entries.length === 1)
       this.#index.delete(hash);
-    } else {
-      this.#index.set(hash,
-        entries.filter(indexed_rel_path => indexed_rel_path !== rel_path)
-      );
-    }
+    else
+      this.#index.set(hash, entries.filter(entry => entry !== rel_path));
 
     return null;
   }
