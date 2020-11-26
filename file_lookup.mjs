@@ -13,7 +13,7 @@ export default class Lookup {
 
   constructor(root) {
     this.#root = path.resolve(root);
-    this.#cachefile = path.join(root, Lookup.#CACHEFILENAME);
+    this.#cachefile = path.join(this.#root, Lookup.#CACHEFILENAME);
   }
 
   /**
