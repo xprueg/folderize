@@ -1,5 +1,3 @@
-"use strict";
-
 import fs from "fs";
 import path from "path";
 
@@ -7,8 +5,6 @@ import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
 import { println } from "./utils/console.mjs";
 import ufs from "./utils/fs.mjs";
-import { hex_hash_sync } from "./utils/hash.mjs";
-import glob_match from "./utils/glob.mjs";
 
 export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup, dirstruct) {
@@ -59,10 +55,8 @@ export default class FileCopy {
 
   copy_folder(src_folder) {
     fs.readdirSync(src_folder, { withFileTypes: true }).forEach(file => {
-      if (this.exclude &&
-          this.exclude.filter(pattern => glob_match(pattern, file.name)).length > 0) {
+      if (this.exclude.test(file.name))
         return void this.progress.update(file.isDirectory() ? "EXCLD" : "EXCLF", +1).step();
-      }
 
       if (file.isDirectory()) {
         return void this.copy_folder(path.join(src_folder, file.name));

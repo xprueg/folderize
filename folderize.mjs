@@ -12,22 +12,25 @@ cap.define("--input", { alias: "-i", expected_values: Infinity, is_required: tru
 cap.define("--output", { alias: "-o", default: "./" });
 cap.define("--dirstruct", { alias: "-d", default: "%Y/%B/%e" })
 cap.define("--locale", { alias: "-l", default: "en-US" });
-cap.define("--exclude", { alias: "-e", expected_values: Infinity });
+cap.define("--exclude", { alias: "-e", default: "^[]" });
 cap.flag("--nocache", { alias: "-n" });
 const args = cap.parse();
 
-const settings = {
-  exclude: args.exclude,
-  locale: args.locale,
-  use_cachefile: !args.nocache,
-  dirstruct: args.dirstruct
-};
-const sources = args.input;
-const destination = args.output;
-const lookup = Lookup.new(destination);
-
 (() => {
   println();
+
+  const settings = {
+    locale: args.locale,
+    use_cachefile: !args.nocache,
+    dirstruct: args.dirstruct
+  };
+  
+  try { settings.exclude = new RegExp(args.exclude) }
+  catch (err) { return void eprintln(`Failed to compile --exclude regex. ${err}\n`) }
+
+  const sources = args.input;
+  const destination = args.output;
+  const lookup = Lookup.new(destination);
 
   if (settings.use_cachefile && fs.existsSync(lookup.get_cachefile())) {
     const err = lookup.load_cachefile();
