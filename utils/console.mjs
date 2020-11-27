@@ -42,7 +42,7 @@ export function eprintln(msg = String()) {
   if (msg !== String())
     msg = `[f]${get_timestamp()}[/f]\x20` + msg;
 
-  console.error(fmt_ansi_esc_codes(msg));
+  console.error(fmt_ansi_esc_codes(`[red]${msg}[/red]`));
 }
 
 /**
