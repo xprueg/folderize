@@ -1,61 +1,86 @@
-"use strict";
-
 import fs from "fs";
 import path from "path";
 
+/**
+ * Tests whether the file is an internal file.
+ * @param {string} filename - The filename to test.
+ * @returns {bool}
+ */
+function is_internal_file(filename) {
+  if (!filename)
+    throw Error("<filename> is mandatory.");
+
+  return /^\.folderize\.(cache|settings)$/.test(filename);
+}
+
 export default class FileSystemUtil {
-  static get_folder_stats(root) {
-    let stat = {
-      dirs: 0,
-      files: 0
+  /**
+   * Returns the count of files and folders.
+   * @param {string} root - Directory to calculate stats for.
+   * @param {RegExp} [exclude] - Files to exclude.
+   * @return {[string|null, object]} Error message or null on success.
+   */
+  static get_folder_stats(root, exclude = /^[]/) {
+    let stat = { files: 0, dirs: 0 };
+    const err = FileSystemUtil.iter_files(root,
+      (file) => stat.files++,
+      (dir) => stat.dirs++,
+    exclude);
+
+    if (err) return [err];
+
+    return [null, stat];
+  }
+
+  /**
+   * Iterate all files and call user supplied functions for each file.
+   * @param {string} dir - The directory to iterate.
+   * @param {function} [filecb] - Will be called for every file.
+   * @param {function} [dircb] - Will be called for every directory.
+   * @param {RegExp} [exclude] - Files to exclude.
+   * @returns {string|null} Error message or null on success.
+   */
+  static iter_files(dir, filecb = (() => {}), dircb = (() => {}), exclude = /^[]/) {
+    if (!dir) return "Param <dir> is mandatory.";
+
+    let dirents = [];
+    try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
+    catch (err) { return err.code }
+
+    for (let dirent of dirents) {
+      const fullname = path.join(dir, dirent.name);
+
+      if (exclude.test(dirent.name) || is_internal_file(dirent.name))
+        continue;
+
+      if (dirent.isDirectory()) {
+        dircb(fullname);
+
+        const err = FileSystemUtil.iter_files(fullname, filecb, dircb, exclude);
+        if (err) return err;
+      } else {
+        filecb(fullname);
+      }
     };
 
-    const files = fs.readdirSync(root, { withFileTypes: true });
-    for (let i = 0; i < files.length; ++i) {
-      const file = files[i];
-
-      if (file.isDirectory()) {
-        stat.dirs++;
-
-        const {dirs, files} = FileSystemUtil.get_folder_stats(path.join(root, file.name));
-        stat.files += files;
-        stat.dirs += dirs;
-      } else {
-        stat.files++;
-      }
-    }
-
-    return stat;
+    return null;
   }
 
   /**
    * Returns a list of all filepaths contained in the given directory.
    * @param {string} dir - The directory to query.
+   * @param {RegExp} [exclude] - Files to exclude.
    * @returns {[string|null, string[]]} Error message or null on success.
    */
-  static query_files(dir) {
-    if (!dir)
-      return ["Param <dir> is mandatory."];
-
-    let dirents = [];
-    try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
-    catch (err) { return [err.code] }
+  static query_files(dir, exclude = /^[]/) {
+    if (!dir) return ["Param <dir> is mandatory."];
 
     let files = Array();
-    for (let dirent of dirents) {
-      const fullname = path.join(dir, dirent.name);
-
-      if (dirent.isDirectory()) {
-        const [err, recursive_files] = FileSystemUtil.query_files(fullname);
-
-        if (err)
-          return [err];
-
-        files = files.concat(recursive_files);
-      } else {
-        files.push(fullname);
-      }
-    };
+    const err = FileSystemUtil.iter_files(dir,
+      (file) => files.push(file),
+      (dir) => {},
+    exclude);
+    if (err) return [err];
 
     return [null, files];
   }

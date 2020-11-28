@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
 import Lookup from "./file_lookup.mjs";
@@ -28,9 +29,9 @@ const args = cap.parse();
   try { settings.exclude = new RegExp(args.exclude) }
   catch (err) { return void eprintln(`Failed to compile --exclude regex. ${err}\n`) }
 
-  const sources = args.input;
-  const destination = args.output;
-  const lookup = Lookup.new(destination);
+  const sources = args.input.map(i => path.resolve(i));
+  const destination = path.resolve(args.output);
+  const lookup = Lookup.new(destination, settings.exclude);
 
   if (settings.use_cachefile && fs.existsSync(lookup.get_cachefile())) {
     const err = lookup.load_cachefile();
@@ -58,7 +59,9 @@ const args = cap.parse();
       return void eprintln(`! Failed to load the cachefile. (${err})\n`);
     }
   } else {
-    const stats = ufs.get_folder_stats(destination);
+    const [err, stats] = ufs.get_folder_stats(destination, settings.exclude);
+    if (err) return void eprintln(`! Failed to stat ${destination}. (${err})\n`);
+
     const progress = Progress.to(stats.files)
       .loader(Progress.constants.LOADER, "\x20\x20")
       .msg("Cached %P% (%C/%T)")
@@ -67,8 +70,8 @@ const args = cap.parse();
     println(`→ Creating in-memory cache for [u]${destination}[/u].`);
     println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
 
-    const err = lookup.generate(progress.step.bind(progress));
-    if (err)
+    const lookup_err = lookup.generate(progress.step.bind(progress));
+    if (lookup_err)
       return void eprintover(`! Failed to generate the in-memory cache. (${err})\n`);
   }
 

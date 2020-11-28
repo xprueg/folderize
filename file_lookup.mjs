@@ -9,20 +9,23 @@ export default class Lookup {
 
   #root;
   #cachefile;
+  #exclude;
   #index = new Map();
 
-  constructor(root) {
-    this.#root = path.resolve(root);
+  constructor(root, exclude) {
+    this.#root = root;
     this.#cachefile = path.join(this.#root, Lookup.#CACHEFILENAME);
+    this.#exclude = exclude;
   }
 
   /**
    * Returns a new Lookup instance.
    * @param {string} root - The directory to cache.
+   * @param {RegExp} [exclude] - Files to exclude.
    * @returns {Lookup}
    */
-  static new(root) {
-    return new Lookup(root);
+  static new(root, exclude = /^[]/) {
+    return new Lookup(root, exclude);
   }
 
   /**
@@ -34,38 +37,15 @@ export default class Lookup {
   }
 
   /**
-   * Generate an index from all files in root.
+   * Generate the index from all files in root.
    * @param {function} [callback] - Will be called for every file.
    * @returns {string|null} Error message or null on success.
    */
-  generate(callback) {
-    return this.#index_files(this.#root, callback ?? (() => {}));
-  }
-
-  /**
-   * Index all files in root.
-   * @param {string} root - Directory to index.
-   * @param {function} callback - Will be called for every file.
-   * @returns {string|null} Error message or null on success.
-   */
-  #index_files(root, callback) {
-    let dirents;
-    try { dirents = fs.readdirSync(root, { withFileTypes: true }) }
-    catch (err) { return err.code; }
-
-    for (let dirent of dirents) {
-      const fullname = path.join(root, dirent.name);
-
-      if (dirent.isDirectory()) {
-        const err = this.#index_files(fullname, callback);
-        if (err) return err;
-      } else {
-        callback(fullname);
-        this.push(fullname);
-      }
-    }
-
-    return null;
+  generate(callback = (() => {})) {
+    return ufs.iter_files(this.#root, (file) => {
+      callback(file);
+      this.push(file);
+    }, (dir) => {}, this.#exclude);
   }
 
   /**
@@ -76,7 +56,7 @@ export default class Lookup {
   update() {
     let diff = { added: [], removed: [], total: 0 };
 
-    let [err, live_dir] = ufs.query_files(this.#root);
+    let [err, live_dir] = ufs.query_files(this.#root, this.#exclude);
     if (err) return [err];
 
     // Filter live_dir to keep only files that are not in the index yet.
@@ -108,16 +88,16 @@ export default class Lookup {
   }
 
   /**
-   * Adds the given file to the lookup if it's not indexed.
+   * Adds the given file to the index.
    * @todo hex_hash_sync might throw, handle this.
-   * @param {string} fullname - The path to the file.
+   * @param {string} fullname - Path to the file located in the #root folder.
    * @returns {void}
    */
   push(fullname) {
-    const hash = hex_hash_sync(fullname);
-    const rel_path = path.relative(this.#root, fullname);
+    if (!this.contains(fullname)) {
+      const hash = hex_hash_sync(fullname);
+      const rel_path = path.relative(this.#root, fullname);
 
-    if (!this.contains(rel_path)) {
       let entries = this.#index.get(hash) ?? Array();
       this.#index.set(hash, entries.concat(rel_path));
     }
@@ -126,7 +106,7 @@ export default class Lookup {
   /**
    * Removes an entry from the index.
    * @param {string} hash - Hash of the file.
-   * @param {string} rel_path - Relative path to the file.
+   * @param {string} rel_path - Relative path to the file located in #root.
    * @returns {string|null} Error message or null on success.
    */
   remove(hash, rel_path) {
@@ -147,26 +127,19 @@ export default class Lookup {
    * Returns whether the index contains a file with the same contents.
    * @todo Bubble <err> gracefully up.
    * @todo Handle potential error in hex_hash_sync.
-   * @param {string} rel_path - Relative path to the file to check.
+   * @param {string} fullname - Path to the file to check.
    * @returns {bool}
    */
-  contains(rel_path) {
-    const hash = hex_hash_sync(path.join(this.#root, rel_path));
+  contains(fullname) {
+    const hash = hex_hash_sync(fullname);
     const paths = this.#index.get(hash);
 
     if (paths === undefined) return false;
 
-    for (let indexed_rel_path of paths) {
-      // Literally the same file.
-      if (indexed_rel_path === rel_path) return true;
+    for (let rel_path of paths) {
+      const [err, equal] = ufs.bytes_equal(path.join(this.#root, rel_path), fullname);
 
-      const [err, equal] = ufs.bytes_equal(
-        path.join(this.#root, indexed_rel_path),
-        path.join(this.#root, rel_path)
-      );
       if (err) throw err;
-
-      // Different path but contents match.
       if (equal) return true;
     }
 
