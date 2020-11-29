@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import ufs from "./utils/fs.mjs";
+import * as ufs from "./utils/fs.mjs";
 import { hex_hash_sync } from "./utils/hash.mjs";
 
 export default class Lookup {

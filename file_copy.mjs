@@ -4,7 +4,7 @@ import path from "path";
 import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
 import { println } from "./utils/console.mjs";
-import ufs from "./utils/fs.mjs";
+import * as ufs from "./utils/fs.mjs";
 
 export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup, dirstruct) {

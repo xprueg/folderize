@@ -5,7 +5,7 @@ import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
 import Lookup from "./file_lookup.mjs";
 import file_copy from "./file_copy.mjs";
 import { println, eprintln } from "./utils/console.mjs";
-import ufs from "./utils/fs.mjs";
+import * as ufs from "./utils/fs.mjs";
 import Progress from "./utils/progress.mjs";
 
 const cap = new ConsoleArgumentParser(process.argv);
