@@ -62,13 +62,13 @@ const args = cap.parse();
     const [err, stats] = ufs.get_folder_stats(destination, settings.exclude);
     if (err) return void eprintln(`! Failed to stat ${destination}. (${err})\n`);
 
-    const progress = Progress.to(stats.files)
+    const progress = Progress.to(stats.file)
       .loader(Progress.constants.LOADER, "\x20\x20")
       .msg("Cached %P% (%C/%T)")
       .msg(", done.", t => t.P === 100);
 
     println(`→ Creating in-memory cache for [u]${destination}[/u].`);
-    println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
+    println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
 
     const lookup_err = lookup.generate(progress.step.bind(progress));
     if (lookup_err)

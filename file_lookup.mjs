@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import * as ufs from "./utils/fs.mjs";
+import { Read, bytes_equal } from "./utils/fs.mjs";
 import { hex_hash_sync } from "./utils/hash.mjs";
 
 export default class Lookup {
@@ -42,10 +42,10 @@ export default class Lookup {
    * @returns {string|null} Error message or null on success.
    */
   generate(callback = (() => {})) {
-    return ufs.iter_files(this.#root, (file) => {
-      callback(file);
-      this.push(file);
-    }, (dir) => {}, this.#exclude);
+    return Read.dir(this.#root).on_file((fullname) => {
+      callback(fullname);
+      this.push(fullname);
+    }).exclude(this.#exclude).iter();
   }
 
   /**
@@ -56,7 +56,7 @@ export default class Lookup {
   update() {
     let diff = { added: [], removed: [], total: 0 };
 
-    let [err, live_dir] = ufs.query_files(this.#root, this.#exclude);
+    let [err, live_dir] = Read.dir(this.#root).exclude(this.#exclude).collect(Read.FILE);
     if (err) return [err];
 
     // Filter live_dir to keep only files that are not in the index yet.
@@ -137,7 +137,7 @@ export default class Lookup {
     if (paths === undefined) return false;
 
     for (let rel_path of paths) {
-      const [err, equal] = ufs.bytes_equal(path.join(this.#root, rel_path), fullname);
+      const [err, equal] = bytes_equal(path.join(this.#root, rel_path), fullname);
 
       if (err) throw err;
       if (equal) return true;

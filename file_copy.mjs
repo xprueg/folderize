@@ -31,14 +31,14 @@ export default class FileCopy {
     const [err, stats] = ufs.get_folder_stats(this.src, this.exclude);
     if (err) throw err;
 
-    this.progress = progress.to(stats.files)
+    this.progress = progress.to(stats.file)
       .loader(LOADER, "\x20\x20")
       .msg("Copied %P% (%C/%T)")
       .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
       .msg(", done.", tokens => tokens.P === 100);
 
     println(`← Copying files from [u]${this.src}[/u].`);
-    println(`\x20\x20Found ${stats.files} file(s) in ${stats.dirs} directories.`);
+    println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
 
     this.copy_folder(this.src);
   }
