@@ -189,25 +189,6 @@ export function iter_files(dir, filecb = (() => {}), dircb = (() => {}), exclude
 }
 
 /**
- * Returns a list of all filepaths contained in the given directory.
- * @param {string} dir - The directory to query.
- * @param {RegExp} [exclude] - Files to exclude.
- * @returns {Array.<{err: ?string, files: string[]}>}
- */
-export function query_files(dir, exclude = /^[]/) {
-  if (!dir) return ["Param <dir> is mandatory."];
-
-  let files = Array();
-  const err = iter_files(dir,
-    (file) => files.push(file),
-    (dir) => {},
-  exclude);
-  if (err) return [err];
-
-  return [null, files];
-}
-
-/**
  * Compare equality of files byte for byte.
  * @param {string} a - Path to file a.
  * @param {string} b - Path to file b.
