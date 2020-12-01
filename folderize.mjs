@@ -5,7 +5,7 @@ import ConsoleArgumentParser from "./utils/console_arg_parser.mjs";
 import Lookup from "./file_lookup.mjs";
 import file_copy from "./file_copy.mjs";
 import { println, eprintln } from "./utils/console.mjs";
-import * as ufs from "./utils/fs.mjs";
+import { Read } from "./utils/fs.mjs";
 import Progress from "./utils/progress.mjs";
 
 const cap = new ConsoleArgumentParser(process.argv);
@@ -59,7 +59,7 @@ const args = cap.parse();
       return void eprintln(`! Failed to load the cachefile. (${err})\n`);
     }
   } else {
-    const [err, stats] = ufs.get_folder_stats(destination, settings.exclude);
+    const [err, stats] = Read.dir(destination).exclude(settings.exclude).count(Read.FILE | Read.DIR);
     if (err) return void eprintln(`! Failed to stat ${destination}. (${err})\n`);
 
     const progress = Progress.to(stats.file)

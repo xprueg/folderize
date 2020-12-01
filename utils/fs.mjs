@@ -13,16 +13,6 @@ function is_internal_file(filename) {
   return /^\.folderize\.(cache|settings)$/.test(filename);
 }
 
-/**
- * Returns the count of files and folders.
- * @param {string} root - Directory to calculate stats for.
- * @param {RegExp} [exclude] - Files to exclude.
- * @returns {Array.<{err: ?string, stats: object}>}
- */
-export function get_folder_stats(root, exclude = /^[]/) {
-  return Read.dir(root).exclude(exclude).count(Read.FILE | Read.DIR);
-}
-
 /** Utility class for iterating over directories. */
 export class Read {
   #typemasks = Object.create(null);

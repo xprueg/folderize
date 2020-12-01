@@ -4,7 +4,7 @@ import path from "path";
 import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
 import { println } from "./utils/console.mjs";
-import * as ufs from "./utils/fs.mjs";
+import { iter_files, get_unique_filename, Read } from "./utils/fs.mjs";
 
 export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup, dirstruct) {
@@ -28,7 +28,7 @@ export default class FileCopy {
   }
 
   init() {
-    const [err, stats] = ufs.get_folder_stats(this.src, this.exclude);
+    const [err, stats] = Read.dir(this.src).exclude(this.exclude).count(Read.FILE | Read.DIR);
     if (err) throw err;
 
     this.progress = progress.to(stats.file)
@@ -56,7 +56,7 @@ export default class FileCopy {
    * @todo Handle potential errors.
    */
   copy_folder(root) {
-    const err = ufs.iter_files(root,
+    const err = iter_files(root,
       (file) => {
         if (this.dst_lookup.contains(file))
           return void this.progress.update("SKP", +1).step();
@@ -75,7 +75,7 @@ export default class FileCopy {
             is_copied = true;
           } catch(err) {
             if (err.code === "EEXIST") {
-              dst_fullname = ufs.get_unique_filename(dst_fullname);
+              dst_fullname = get_unique_filename(dst_fullname);
             } else {
               throw err;
             }
