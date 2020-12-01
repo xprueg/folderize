@@ -17,12 +17,13 @@ function is_internal_file(filename) {
  * Returns the count of files and folders.
  * @param {string} root - Directory to calculate stats for.
  * @param {RegExp} [exclude] - Files to exclude.
- * @return {[string|null, object]} Error message or null on success.
+ * @returns {Array.<{err: ?string, stats: object}>}
  */
 export function get_folder_stats(root, exclude = /^[]/) {
   return Read.dir(root).exclude(exclude).count(Read.FILE | Read.DIR);
 }
 
+/** Utility class for iterating over directories. */
 export class Read {
   #typemasks = Object.create(null);
   static FILE    = 1 << 0;
@@ -42,25 +43,50 @@ export class Read {
     });
   }
 
+  /**
+   * Create a new Read instance.
+   * @param {string} root - Directory to use.
+   * @returns {Read}
+   */
   static dir(root) {
     return new Read(root);
   }
 
+  /**
+   * Sets the exclude regex.
+   * @param {RegExp} regex - Files to exclude.
+   * @returns {this} 
+   */
   exclude(regex) {
     this.#exclude = regex;
     return this;
   }
 
+  /**
+   * Adds a file callback.
+   * @param {function} fn - Callback function.
+   * @returns {this} 
+   */
   on_file(fn) {
     this.#callbacks.on_file = fn;
     return this;
   }
 
+  /**
+   * Adds a dir callback.
+   * @param {function} fn - Callback function.
+   * @returns {this} 
+   */
   on_dir(fn) {
     this.#callbacks.on_dir = fn;
     return this;
   }
 
+  /**
+   * Counts the provided types.
+   * @param {number} flags - Types to count.
+   * @returns {Array.<{err: ?string, count: object}>}
+   */
   count(flags) {
     let count = {};
 
@@ -77,6 +103,12 @@ export class Read {
     return [null, count];
   }
 
+  /**
+   * Collects the provided types.
+   * If a single type is provided an Array will be returned otherwise an Object.
+   * @param {number} flags - Types to collect. 
+   * @returns {Array.<{err: ?string, collection: (string[]|object)}>}
+   */
   collect(flags) {
     let flag_count = flags.toString(2).split("").filter(bit => bit === "1").length;
     let collection = flag_count === 1 ? Array() : Object.create(null);
@@ -100,6 +132,11 @@ export class Read {
     return [null, collection];
   }
 
+  /**
+   * Iterate the provided directory recursively.
+   * @param {string} [dir=this.#root] - Directory to iterate.
+   * @returns {?string} Error message or null on success.
+   */
   iter(dir = this.#root) {
     let dirents = [];
     try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
@@ -165,7 +202,7 @@ export function iter_files(dir, filecb = (() => {}), dircb = (() => {}), exclude
  * Returns a list of all filepaths contained in the given directory.
  * @param {string} dir - The directory to query.
  * @param {RegExp} [exclude] - Files to exclude.
- * @returns {[string|null, string[]]} Error message or null on success.
+ * @returns {Array.<{err: ?string, files: string[]}>}
  */
 export function query_files(dir, exclude = /^[]/) {
   if (!dir) return ["Param <dir> is mandatory."];
@@ -184,7 +221,7 @@ export function query_files(dir, exclude = /^[]/) {
  * Compare equality of files byte for byte.
  * @param {string} a - Path to file a.
  * @param {string} b - Path to file b.
- * @returns {[string|null, bool]} Error message or null on success.
+ * @returns {Array.<{err: ?string, equal: bool}>}
  */
 export function bytes_equal(a, b) {
   try {
