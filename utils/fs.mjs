@@ -153,41 +153,6 @@ export class Read {
   }
 }
 
-
-/**
- * Iterate all files and call user supplied functions for each file.
- * @param {string} dir - The directory to iterate.
- * @param {function} [filecb] - Will be called for every file.
- * @param {function} [dircb] - Will be called for every directory.
- * @param {RegExp} [exclude] - Files to exclude.
- * @returns {string|null} Error message or null on success.
- */
-export function iter_files(dir, filecb = (() => {}), dircb = (() => {}), exclude = /^[]/) {
-  if (!dir) return "Param <dir> is mandatory.";
-
-  let dirents = [];
-  try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
-  catch (err) { return err.code }
-
-  for (let dirent of dirents) {
-    const fullname = path.join(dir, dirent.name);
-
-    if (exclude.test(dirent.name) || is_internal_file(dirent.name))
-      continue;
-
-    if (dirent.isDirectory()) {
-      dircb(fullname);
-
-      const err = iter_files(fullname, filecb, dircb, exclude);
-      if (err) return err;
-    } else {
-      filecb(fullname);
-    }
-  };
-
-  return null;
-}
-
 /**
  * Compare equality of files byte for byte.
  * @param {string} a - Path to file a.

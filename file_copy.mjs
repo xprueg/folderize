@@ -4,7 +4,7 @@ import path from "path";
 import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
 import { println } from "./utils/console.mjs";
-import { iter_files, get_unique_filename, Read } from "./utils/fs.mjs";
+import { get_unique_filename, Read } from "./utils/fs.mjs";
 
 export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup, dirstruct) {
@@ -40,7 +40,9 @@ export default class FileCopy {
     println(`← Copying files from [u]${this.src}[/u].`);
     println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
 
-    this.copy_folder(this.src);
+    const copy_err = Read.dir(this.src).on_file((fullname) => {
+      const err = this.copy_file(fullname);
+    }).exclude(this.exclude).iter();
   }
 
   get_dst_folder(mtime) {
@@ -55,37 +57,32 @@ export default class FileCopy {
   /**
    * @todo Handle potential errors.
    */
-  copy_folder(root) {
-    const err = iter_files(root,
-      (file) => {
-        if (this.dst_lookup.contains(file))
-          return void this.progress.update("SKP", +1).step();
+  copy_file(fullname) {
+    if (this.dst_lookup.contains(fullname))
+      return void this.progress.update("SKP", +1).step();
 
-        const src_stat = fs.lstatSync(file);
-        const dst_folder = this.get_dst_folder(src_stat.mtime);
-        if (!fs.existsSync(dst_folder))
-          fs.mkdirSync(dst_folder, { recursive: true });
+    const src_stat = fs.lstatSync(fullname);
+    const dst_folder = this.get_dst_folder(src_stat.mtime);
+    if (!fs.existsSync(dst_folder))
+      fs.mkdirSync(dst_folder, { recursive: true });
 
-        let dst_fullname = path.join(dst_folder, path.basename(file));
-        let is_copied = false;
-        do {
-          try {
-            fs.copyFileSync(file, dst_fullname, fs.constants.COPYFILE_EXCL);
-            fs.utimesSync(dst_fullname, src_stat.atime, src_stat.mtime);
-            is_copied = true;
-          } catch(err) {
-            if (err.code === "EEXIST") {
-              dst_fullname = get_unique_filename(dst_fullname);
-            } else {
-              throw err;
-            }
-          }
-        } while (!is_copied);
+    let dst_fullname = path.join(dst_folder, path.basename(fullname));
+    let is_copied = false;
+    do {
+      try {
+        fs.copyFileSync(fullname, dst_fullname, fs.constants.COPYFILE_EXCL);
+        fs.utimesSync(dst_fullname, src_stat.atime, src_stat.mtime);
+        is_copied = true;
+      } catch(err) {
+        if (err.code === "EEXIST") {
+          dst_fullname = get_unique_filename(dst_fullname);
+        } else {
+          throw err;
+        }
+      }
+    } while (!is_copied);
 
-        this.dst_lookup.push(dst_fullname);
-        this.progress.step();
-      },
-      (dir) => {},
-    this.exclude);
+    this.dst_lookup.push(dst_fullname);
+    this.progress.step();
   }
 }
