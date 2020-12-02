@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { Read, bytes_equal } from "./utils/fs.mjs";
-import { hex_hash_sync } from "./utils/hash.mjs";
+import { get_filehash } from "./utils/hash.mjs";
 
 export default class Lookup {
   static #CACHEFILENAME = ".folderize.cache";
@@ -39,19 +39,20 @@ export default class Lookup {
   /**
    * Generate the index from all files in root.
    * @param {function} [callback] - Will be called for every file.
-   * @returns {string|null} Error message or null on success.
+   * @returns {?string} Error message or null on success.
    */
   generate(callback = (() => {})) {
     return Read.dir(this.#root).on_file((fullname) => {
       callback(fullname);
-      this.push(fullname);
+      const err = this.push(fullname);
+      if (err) return err;
     }).exclude(this.#exclude).iter();
   }
 
   /**
     * Update index against live folder.
     * @todo Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
-    * @returns {[string|null, object]} Error message or null on success.
+    * @returns {[?string, object]} Error message or null on success.
     */
   update() {
     let diff = { added: [], removed: [], total: 0 };
@@ -78,7 +79,9 @@ export default class Lookup {
 
     // Add the new files to the index.
     for (let fullname of live_dir) {
-      this.push(fullname);
+      const err = this.push(fullname);
+      if (err) return [err];
+
       diff.added.push(fullname);
     }
 
@@ -89,13 +92,17 @@ export default class Lookup {
 
   /**
    * Adds the given file to the index.
-   * @todo hex_hash_sync might throw, handle this.
    * @param {string} fullname - Path to the file located in the #root folder.
-   * @returns {void}
+   * @returns {?string} Error message or null on success.
    */
   push(fullname) {
-    if (!this.contains(fullname)) {
-      const hash = hex_hash_sync(fullname);
+    const [err, contains] = this.contains(fullname);
+    if (err) return err;
+
+    if (!contains) {
+      const [err, hash] = get_filehash(fullname);
+      if (err) return err;
+
       const rel_path = path.relative(this.#root, fullname);
 
       let entries = this.#index.get(hash) ?? Array();
@@ -107,7 +114,7 @@ export default class Lookup {
    * Removes an entry from the index.
    * @param {string} hash - Hash of the file.
    * @param {string} rel_path - Relative path to the file located in #root.
-   * @returns {string|null} Error message or null on success.
+   * @returns {?string} Error message or null on success.
    */
   remove(hash, rel_path) {
     const entries = this.#index.get(hash);
@@ -125,26 +132,26 @@ export default class Lookup {
 
   /**
    * Returns whether the index contains a file with the same contents.
-   * @todo Bubble <err> gracefully up.
-   * @todo Handle potential error in hex_hash_sync.
    * @param {string} fullname - Path to the file to check.
-   * @returns {bool}
+   * @returns {Array.<{err: ?string, contains: boolean}>}
    */
   contains(fullname) {
-    const hash = hex_hash_sync(fullname);
+    const [err, hash] = get_filehash(fullname);
+    if (err) return [err];
+
     const paths = this.#index.get(hash);
 
-    if (paths === undefined) return false;
+    if (paths === undefined) return [null, false];
 
     for (let rel_path of paths) {
       const [err, equal] = bytes_equal(path.join(this.#root, rel_path), fullname);
 
-      if (err) throw err;
-      if (equal) return true;
+      if (err) return [err];
+      if (equal) return [null, true];
     }
 
     // Hash collision, hash exists but contents do not.
-    return false;
+    return [null, false];
   }
 
   /**

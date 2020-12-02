@@ -1,34 +1,20 @@
-import { readFileSync, createReadStream } from "fs";
+import { readFileSync } from "fs";
 import { createHash } from "crypto";
 
 /**
- * Asynchronously creates a hash and calls the callback with the hex representation.
- * @param {string} path - Path to the file to hash.
- * @param {function} callback - Function that will be called with the hash.
- * @param {string} [algorithm=sha1] - The algorithm to use.
- * @returns {void}
- */
-export function hex_hash_async(path, callback, algorithm = "sha1") {
-  const hash = createHash(algorithm);
-  const stream = createReadStream(path);
-
-  stream.on("end", () => {
-    callback(hash.digest("hex"));
-    stream.destroy();
-  }).pipe(hash);
-}
-
-/**
- * Returns a hash in hex form.
+ * Returns the specified hash digest for a given file.
  * @param {string} path - Path to the file to hash. 
- * @param {string} [algorithm=sha1] - The algorithm to use.
- * @returns {string} 
+ * @param {string} [algorithm=sha1] - Algorithm to use.
+ * @param {string} [encoding=hex] - Encoding of the returned hash.
+ * @returns {Array.<{err: ?string, digest: string}>} 
  */
-export function hex_hash_sync(path, algorithm = "sha1") {
-  const hash = createHash(algorithm);
-  const buffer = readFileSync(path);
+export function get_filehash(path, algorithm = "sha1", encoding = "hex") {
+  try {
+    const buffer = readFileSync(path);
+    const hash = createHash(algorithm);
 
-  return hash
-    .update(buffer)
-    .digest("hex");
+    return [null, hash.update(buffer).digest(encoding)];
+  } catch(err) {
+    return [err.code];
+  }
 };

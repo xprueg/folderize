@@ -55,10 +55,16 @@ export default class FileCopy {
   }
 
   /**
-   * @todo Handle potential errors.
+   * Copies the provided file from src to dst.
+   * @todo Handle all possible errors. (lstatSync, mkdirSync, …)
+   * @param {string} fullname - File to copy.
+   * @returns {?string} Error message or null on success. 
    */
   copy_file(fullname) {
-    if (this.dst_lookup.contains(fullname))
+    const [err, contains] = this.dst_lookup.contains(fullname);
+    if (err) return err;
+
+    if (contains)
       return void this.progress.update("SKP", +1).step();
 
     const src_stat = fs.lstatSync(fullname);
@@ -77,12 +83,14 @@ export default class FileCopy {
         if (err.code === "EEXIST") {
           dst_fullname = get_unique_filename(dst_fullname);
         } else {
-          throw err;
+          return err.code;
         }
       }
     } while (!is_copied);
 
-    this.dst_lookup.push(dst_fullname);
+    const push_err = this.dst_lookup.push(dst_fullname);
+    if (push_err) return push_err;
+
     this.progress.step();
   }
 }
