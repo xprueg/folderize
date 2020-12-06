@@ -6,7 +6,7 @@ The folderize utility copies files from multiple sources into a single destinati
 
 ## Synopsis
 
-<pre><b>folderize</b> [<b>-n</b>] <b>--input</b> <ins>PATH</ins> <ins>...</ins> [<b>--output</b> <ins>PATH</ins>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>REGEX</ins>]</pre>
+<pre><b>folderize</b> [<b>-c</b>] <b>--input</b> <ins>PATH</ins> <ins>...</ins> [<b>--output</b> <ins>PATH</ins>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>REGEX</ins>]</pre>
 
 ## Options
 
@@ -37,8 +37,8 @@ The folderize utility copies files from multiple sources into a single destinati
 <div><code><b>--exclude</b>, <b>-e</b> <ins>REGEX</ins></code></div>
 <dl><dd>The files and/or folders names which shall not be copied.&nbsp;&nbsp;The regex must not be enclosed by slashes.</pre></dd></dl>
 
-<div><code><b>--nocache</b>, <b>-n</b></code></div>
-<dl><dd>Disables the creation/use of the cache file `folderize.cache'.&nbsp;&nbsp;The file index will be rebuild from scratch.</dd></dl>
+<div><code><b>--cache</b>, <b>-c</b></code></div>
+<dl><dd>Enables the creation/use of the cache file `folderize.cache'.</dd></dl>
 
 ## Tests
 
