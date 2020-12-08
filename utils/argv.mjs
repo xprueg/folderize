@@ -152,6 +152,7 @@ export default class Argv {
         if (err = this.#parse_options())
             return [err];
 
+        this.#split_single_char_tokens();
         if (err = this.#extract_cli_values())
             return [err];
 
@@ -194,6 +195,17 @@ export default class Argv {
 
     #is_alias(str) {
         return /^-[^-]/.test(str);
+    }
+
+    #split_single_char_tokens() {
+        for (let i = 0; i < this.#argv.length; ++i) {
+            const cli_token = this.#argv[i];
+
+            if (/^-[^-]/.test(cli_token) && !this.#get_defined_option(cli_token)) {
+                const split = cli_token.substr(1).split(String()).map(t => `-${t}`);
+                this.#argv.splice(i, 1, ...split);
+            }
+        }
     }
 
     /**
