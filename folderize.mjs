@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { assert } from "console";
 
 import Argv from "./utils/argv.mjs";
 import Lookup from "./file_lookup.mjs";
@@ -7,7 +8,6 @@ import file_copy from "./file_copy.mjs";
 import { println, eprintln } from "./utils/console.mjs";
 import { Read } from "./utils/fs.mjs";
 import Progress from "./utils/progress.mjs";
-import { assert } from "console";
 
 const cli_options = {
   // The input folder(s).
@@ -46,12 +46,15 @@ const cli_options = {
   cache: { is_flag: true }
 };
 
+process.on("uncaughtException", (err) => {
+  eprintln(`! ${err.toString()}\n`);
+  process.exit(1);
+});
+
 (() => {
   println();
 
-  const [err, settings] = Argv.new().options(cli_options).parse();
-  if (err) return void eprintln(`! Failed to parse arguments. (${err})\n`);
-
+  const settings = Argv.new().options(cli_options).parse();
   const lookup = Lookup.new(settings.output, settings.exclude);
 
   if (settings.cache && fs.existsSync(lookup.get_cachefile())) {
@@ -115,7 +118,7 @@ const cli_options = {
     } else {
       eprintln(`! Failed to save the cachefile. (${err})`);
     }
-  }
 
-  println();
+    println();
+  }
 })();
