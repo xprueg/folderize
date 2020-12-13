@@ -5,6 +5,7 @@ import progress from "./utils/progress.mjs";
 const { LOADER } = progress.constants;
 import { println } from "./utils/console.mjs";
 import { get_unique_filename, Read } from "./utils/fs.mjs";
+import { panic } from "./utils/panic.mjs";
 
 export default class FileCopy {
   constructor(src, dst, locale, exclude, lookup, dirstruct) {
@@ -44,13 +45,30 @@ export default class FileCopy {
     }).exclude(this.exclude).iter();
   }
 
+  /**
+   * Returns the formatted path for the given mtime.
+   * Creates missing segments if they don't exist.
+   * @param {Date} mtime
+   * @returns {string}
+   */
   get_dst_folder(mtime) {
-    const mtime_date = new Date(mtime);
-    const struct = this.dirstruct.replace(/%(\w)/g, (_, match) => {
-      return this.formatter[match].format(mtime_date);
-    })
+    let dst_folder = this.dst;
+    const segments = this.dirstruct.replace(/%(\w)/g, (_, match) => {
+      return this.formatter[match].format(mtime);
+    }).split("/");
 
-    return path.join(this.dst, struct);
+    segments.forEach(segment => {
+      const dirs = Read.dir(dst_folder).exclude(this.exclude).collect(Read.DIR);
+
+      for (let dir of dirs)
+        if (path.basename(dir).startsWith(segment))
+          return void ((dst_folder = dir));
+    
+      dst_folder = path.join(dst_folder, segment);
+      fs.mkdirSync(dst_folder);
+    });
+
+    return dst_folder;
   }
 
   /**
@@ -60,15 +78,11 @@ export default class FileCopy {
    * @returns {?string} Error message or null on success. 
    */
   copy_file(fullname) {
-    const contains = this.dst_lookup.contains(fullname);
-
-    if (contains)
+    if (this.dst_lookup.contains(fullname))
       return void this.progress.update("SKP", +1).step();
 
     const src_stat = fs.lstatSync(fullname);
     const dst_folder = this.get_dst_folder(src_stat.mtime);
-    if (!fs.existsSync(dst_folder))
-      fs.mkdirSync(dst_folder, { recursive: true });
 
     let dst_fullname = path.join(dst_folder, path.basename(fullname));
     let is_copied = false;
@@ -81,14 +95,12 @@ export default class FileCopy {
         if (err.code === "EEXIST") {
           dst_fullname = get_unique_filename(dst_fullname);
         } else {
-          return err.code;
+          panic(err)`File ${fullname} could not be copied`;
         }
       }
     } while (!is_copied);
 
-    const push_err = this.dst_lookup.push(dst_fullname);
-    if (push_err) return push_err;
-
+    this.dst_lookup.push(dst_fullname);
     this.progress.step();
   }
 }
