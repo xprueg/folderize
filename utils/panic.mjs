@@ -1,3 +1,5 @@
+import { EOL } from "os";
+
 class Panic extends Error {
     constructor(strings, props, cause = undefined) {
         super(Panic.#message(strings, props));
@@ -33,12 +35,12 @@ class Panic extends Error {
     }
 
     toString() {
-        let out = this.message;
+        let out = [this.message + "."];
         let error = this;
         while ((error = error.cause))
-            out += ": " + error.message;
+            out.push(error.message + ".");
 
-        return `${out}.`;
+        return out.join(EOL);
     }
 }
 

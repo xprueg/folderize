@@ -1,15 +1,14 @@
 import fs from "fs";
 import path from "path";
 
+import { panic } from "./panic.mjs";
+
 /**
  * Tests whether the file is an internal file.
- * @param {string} filename - The filename to test.
+ * @param {string} filename - Filename to test.
  * @returns {bool}
  */
 function is_internal_file(filename) {
-  if (!filename)
-    throw Error("<filename> is mandatory.");
-
   return /^\.folderize\.(cache|settings)$/.test(filename);
 }
 
@@ -75,7 +74,8 @@ export class Read {
   /**
    * Counts the provided types.
    * @param {number} flags - Types to count.
-   * @returns {Array.<{err: ?string, count: object}>}
+   * @throws {Panic}
+   * @returns {object}
    */
   count(flags) {
     let count = {};
@@ -87,17 +87,21 @@ export class Read {
       }
     }
 
-    const err = this.iter();
-    if (err) return [err];
+    try {
+      this.iter();
+    } catch(err) {
+      panic(err)`Failed to count files`;
+    }
 
-    return [null, count];
+    return count;
   }
 
   /**
    * Collects the provided types.
    * If a single type is provided an Array will be returned otherwise an Object.
    * @param {number} flags - Types to collect. 
-   * @returns {Array.<{err: ?string, collection: (string[]|object)}>}
+   * @throws {Panic}
+   * @returns {(string[]|object)}
    */
   collect(flags) {
     let flag_count = flags.toString(2).split("").filter(bit => bit === "1").length;
@@ -116,21 +120,23 @@ export class Read {
       }
     }
 
-    const err = this.iter();
-    if (err) return [err];
+    try {
+      this.iter();
+    } catch(err) {
+      panic(err)`Failed to collect files`;
+    }
 
-    return [null, collection];
+    return collection;
   }
 
   /**
    * Iterate the provided directory recursively.
    * @param {string} [dir=this.#root] - Directory to iterate.
-   * @returns {?string} Error message or null on success.
+   * @throws {Error}
+   * @returns {void}
    */
   iter(dir = this.#root) {
-    let dirents = [];
-    try { dirents = fs.readdirSync(dir, { withFileTypes: true }) }
-    catch (err) { return err.code }
+    let dirents = fs.readdirSync(dir, { withFileTypes: true });
 
     for (let dirent of dirents) {
       if (this.#exclude.test(dirent.name)
@@ -142,31 +148,29 @@ export class Read {
       if (dirent.isDirectory()) {
         this.#callbacks.on_dir(fullname);
 
-        const err = this.iter(fullname);
-        if (err) return err;
+        this.iter(fullname);
       } else if (dirent.isFile()) {
         this.#callbacks.on_file(fullname);
       }
     };
-
-    return null;
   }
 }
 
 /**
  * Compare equality of files byte for byte.
- * @param {string} a - Path to file a.
- * @param {string} b - Path to file b.
- * @returns {Array.<{err: ?string, equal: bool}>}
+ * @param {string} a - Filepath a.
+ * @param {string} b - Filepath b.
+ * @throws {Panic}
+ * @returns {bool}
  */
 export function bytes_equal(a, b) {
   try {
     const buff_a = fs.readFileSync(a);
     const buff_b = fs.readFileSync(b);
 
-    return [null, buff_a.equals(buff_b)];
+    return buff_a.equals(buff_b);
   } catch(err) {
-    return [err.code];
+    panic(err)`Failed to byte compare ${{ $a: a }} against ${{ $b: b }}`;
   }
 }
 

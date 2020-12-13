@@ -28,8 +28,7 @@ export default class FileCopy {
   }
 
   init() {
-    const [err, stats] = Read.dir(this.src).exclude(this.exclude).count(Read.FILE | Read.DIR);
-    if (err) throw err;
+    const stats = Read.dir(this.src).exclude(this.exclude).count(Read.FILE | Read.DIR);
 
     this.progress = progress.to(stats.file)
       .loader(LOADER, "\x20\x20")
@@ -61,8 +60,7 @@ export default class FileCopy {
    * @returns {?string} Error message or null on success. 
    */
   copy_file(fullname) {
-    const [err, contains] = this.dst_lookup.contains(fullname);
-    if (err) return err;
+    const contains = this.dst_lookup.contains(fullname);
 
     if (contains)
       return void this.progress.update("SKP", +1).step();

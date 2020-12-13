@@ -1,4 +1,3 @@
-import { group } from "console";
 import { panic } from "./panic.mjs";
 
 class Option {
@@ -44,7 +43,7 @@ class Option {
             this.#self.name = `--${this.#self.name}`;
             this.#self.alias = `-${this.#self.alias}`;
         } catch(err) {
-            panic(err)`failed to create ${{ option }}`;
+            panic(err)`Failed to create ${{ option }}`;
         }
     }
 
@@ -57,7 +56,7 @@ class Option {
 
         for (let propertyName of Object.keys(props))
             if (!valid.includes(propertyName))
-                panic`invalid ${{ propertyName }}`;
+                panic`Invalid ${{ propertyName }}`;
     }
 
     get name() {
@@ -95,21 +94,21 @@ class Option {
         try {
             // Assert that required options are set.
             if (this.#self.is_required && this.#self.is_set === false)
-                panic`required ${{ option: this.#self.name }} is not set`;
+                panic`Required ${{ option: this.#self.name }} is not set`;
 
             // Assert the expected argument count.
             if (this.#self.default === Option.#UNDEF
                 && this.#self.args.length < this.#self.expected_args
                 && this.#self.expected_args === Infinity && this.#self.args.length === 0)
                 panic`
-                    expected ${{ $expected: this.#self.expected_args }} argument(s),
+                    Expected ${{ $expected: this.#self.expected_args }} argument(s),
                     ${{ received: this.#self.args.length }}
                 `;
 
             // Assert custom user function.
             this.#self.args.forEach(this.#self.assert);
         } catch(err) {
-            panic(err)`failed to assert ${{ option: this.#self.name }}`;
+            panic(err)`Assertion for ${{ option: this.#self.name }} failed`;
         }
     }
 
@@ -124,25 +123,22 @@ export default class Argv {
     src_file;
     #argv;
 
-    // Raw option definitions from the user.
-    #options;
-
     // Parsed options.
     #args = Object.create(null);
 
     constructor(argv) {
         try {
             if (!Array.isArray(argv))
-                panic`param 'argv' must be of type array`;
+                panic`Param 'argv' must be of type array`;
 
             if (argv.length < 2)
-                panic`param 'argv' must contain at least two elements`;
+                panic`Param 'argv' must contain at least two elements`;
 
             this.node_exec = argv.shift();
             this.src_file = argv.shift();
             this.#argv = argv;
         } catch(err) {
-            panic(err)`failed to create Argv`;
+            panic(err)`Failed to create Argv`;
         }
     }
 
@@ -151,23 +147,14 @@ export default class Argv {
     }
 
     /**
-     * Sets the options.
-     * @param {object} options - CLI options.
-     * @returns {this}
-     */
-    options(options) {
-        this.#options = options;
-        return this;
-    }
-
-    /**
      * Parses and returns the options.
+     * @param {object} options - Options to parse.
      * @throws {Panic}
      * @returns {object};
      */
-    parse() {
-        this.#parse_options();
-        this.#split_single_char_tokens();
+    parse(options = Object.create(null)) {
+        this.#init_options(options);
+        this.#split_single_char_options();
         this.#extract_cli_values();
 
         for (let option of Object.values(this.#args)) {
@@ -182,16 +169,17 @@ export default class Argv {
     }
 
     /**
-     * Parse user defined options.
+     * Initialize user defined options.
+     * @param {object} options
      * @throws {Panic}
      * @returns {void}
      */
-    #parse_options() {
+    #init_options(options) {
         try {
-            for (let [option, props] of Object.entries(this.#options))
+            for (let [option, props] of Object.entries(options))
                 this.#args[option] = Option.new(option, props);
         } catch(err) {
-            panic(err)`failed to parse options`;
+            panic(err)`Failed to initialize command line options`;
         }
     }
 
@@ -207,12 +195,17 @@ export default class Argv {
         return /^-[^-]/.test(str);
     }
 
-    #split_single_char_tokens() {
+    /**
+     * Split single dash multiple character argv options into single character options.
+     * [-xyz] → [-x -y -z]
+     */
+    #split_single_char_options() {
         for (let i = 0; i < this.#argv.length; ++i) {
-            const cli_token = this.#argv[i];
+            const option = this.#argv[i];
 
-            if (/^-[^-]/.test(cli_token) && !this.#get_defined_option(cli_token)) {
-                const split = cli_token.substr(1).split(String()).map(t => `-${t}`);
+            // Split if token starts with a single dash and is not a known alias.
+            if (/^-[^-]/.test(option) && !this.#get_defined_option(option)) {
+                const split = option.substr(1).split(String()).map(t => `-${t}`);
                 this.#argv.splice(i, 1, ...split);
             }
         }
@@ -269,13 +262,13 @@ export default class Argv {
                 const defined_option = this.#get_defined_option(option);
 
                 if (defined_option === false)
-                    panic`unkown ${{ option }}`;
+                    panic`Unkown ${{ option }}`;
 
                 defined_option.is_set = true;
                 defined_option.args = args;
             }
         } catch(err) {
-            panic(err)`failed to parse command line arguments`;
+            panic(err)`Failed to parse command line options`;
         }
     }
 

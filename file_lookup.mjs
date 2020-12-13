@@ -3,6 +3,7 @@ import path from "path";
 
 import { Read, bytes_equal } from "./utils/fs.mjs";
 import { get_filehash } from "./utils/hash.mjs";
+import { panic } from "./utils/panic.mjs";
 
 export default class Lookup {
   static #CACHEFILENAME = ".folderize.cache";
@@ -20,8 +21,8 @@ export default class Lookup {
 
   /**
    * Returns a new Lookup instance.
-   * @param {string} root - The directory to cache.
-   * @param {RegExp} [exclude] - Files to exclude.
+   * @param {string} root - Path to the directory to cache.
+   * @param {RegExp} [exclude=/^[]/] - Files to exclude.
    * @returns {Lookup}
    */
   static new(root, exclude = /^[]/) {
@@ -29,7 +30,7 @@ export default class Lookup {
   }
 
   /**
-   * Returns the absolute path to the cachefile.
+   * Returns the path to the cachefile.
    * @returns {string}
    */
   get_cachefile() {
@@ -39,74 +40,78 @@ export default class Lookup {
   /**
    * Generate the index from all files in root.
    * @param {function} [callback] - Will be called for every file.
-   * @returns {?string} Error message or null on success.
+   * @throws {Panic}
+   * @returns {void}
    */
   generate(callback = (() => {})) {
-    return Read.dir(this.#root).on_file((fullname) => {
-      callback(fullname);
-      const err = this.push(fullname);
-      if (err) return err;
-    }).exclude(this.#exclude).iter();
+    try {
+      Read.dir(this.#root).on_file((fullname) => {
+        callback(fullname);
+        this.push(fullname);
+      }).exclude(this.#exclude).iter();
+    } catch(err) {
+      panic(err)`Failed to generate the in-memory cache`;
+    }
   }
 
   /**
     * Update index against live folder.
     * @todo Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
-    * @returns {[?string, object]} Error message or null on success.
+    * @throws {Panic}
+    * @returns {{added: string[], removed: string[], total: number}}
     */
   update() {
-    let diff = { added: [], removed: [], total: 0 };
+    try {
+      let diff = { added: [], removed: [], total: 0 };
+      
+      const live_dir = Read.dir(this.#root).exclude(this.#exclude).collect(Read.FILE);
 
-    let [err, live_dir] = Read.dir(this.#root).exclude(this.#exclude).collect(Read.FILE);
-    if (err) return [err];
+      // Filter live_dir to keep only files that are not in the index yet.
+      // Remove files from the index that cannot be found in the live directory anymore.
+      for (let [hash, rel_paths] of this.#index) {
+        for (let rel_path of rel_paths) {
+          const search = live_dir.indexOf(path.join(this.#root, rel_path));
 
-    // Filter live_dir to keep only files that are not in the index yet.
-    // Remove files from the index that cannot be found in the live directory anymore.
-    for (let [hash, rel_paths] of this.#index) {
-      for (let rel_path of rel_paths) {
-        const search = live_dir.indexOf(path.join(this.#root, rel_path));
-
-        if (search !== -1) {  // Filepath exists.
-          live_dir.splice(search, 1);
-        } else {  // Filepath is invalid.
-          const err = this.remove(hash, rel_path);
-          if (err) return [err];
-
-          diff.removed.push(rel_path);
+          if (search !== -1) {  // Filepath exists.
+            live_dir.splice(search, 1);
+          } else {  // Filepath is invalid.
+            this.remove(hash, rel_path);
+            diff.removed.push(rel_path);
+          }
         }
+      };
+
+      // Add the new files to the index.
+      for (let fullname of live_dir) {
+        this.push(fullname);
+        diff.added.push(fullname);
       }
-    };
 
-    // Add the new files to the index.
-    for (let fullname of live_dir) {
-      const err = this.push(fullname);
-      if (err) return [err];
+      diff.total = diff.added.length + diff.removed.length;
 
-      diff.added.push(fullname);
+      return diff;
+    } catch(err) {
+      panic(err)`Failed to update index`;
     }
-
-    diff.total = diff.added.length + diff.removed.length;
-
-    return [null, diff];
   }
 
   /**
    * Adds the given file to the index.
-   * @param {string} fullname - Path to the file located in the #root folder.
-   * @returns {?string} Error message or null on success.
+   * @param {string} fullname - Filepath to index.
+   * @throws {Panic}
+   * @returns {void}
    */
   push(fullname) {
-    const [err, contains] = this.contains(fullname);
-    if (err) return err;
+    try {
+      if (!this.contains(fullname)) {
+        const hash = get_filehash(fullname);
+        const rel_path = path.relative(this.#root, fullname);
 
-    if (!contains) {
-      const [err, hash] = get_filehash(fullname);
-      if (err) return err;
-
-      const rel_path = path.relative(this.#root, fullname);
-
-      let entries = this.#index.get(hash) ?? Array();
-      this.#index.set(hash, entries.concat(rel_path));
+        let entries = this.#index.get(hash) ?? Array();
+        this.#index.set(hash, entries.concat(rel_path));
+      }
+    } catch(err) {
+      panic(err)`Failed to push ${{ fullname }}`;
     }
   }
 
@@ -114,104 +119,117 @@ export default class Lookup {
    * Removes an entry from the index.
    * @param {string} hash - Hash of the file.
    * @param {string} rel_path - Relative path to the file located in #root.
-   * @returns {?string} Error message or null on success.
+   * @throws {Panic}
+   * @returns {void}
    */
   remove(hash, rel_path) {
     const entries = this.#index.get(hash);
 
     if (entries === undefined || !entries.includes(rel_path))
-      return `<${rel_path} (${hash})> cannot be removed because it does not exist.`;
+      panic`Path ${rel_path} with ${{ hash }} cannot be removed because it does not exist.`;
 
     if (entries.length === 1)
       this.#index.delete(hash);
     else
       this.#index.set(hash, entries.filter(entry => entry !== rel_path));
-
-    return null;
   }
 
   /**
    * Returns whether the index contains a file with the same contents.
-   * @param {string} fullname - Path to the file to check.
-   * @returns {Array.<{err: ?string, contains: boolean}>}
+   * @param {string} fullname - Filepath to check.
+   * @throws {Panic}
+   * @returns {bool}
    */
   contains(fullname) {
-    const [err, hash] = get_filehash(fullname);
-    if (err) return [err];
-
+    const hash = get_filehash(fullname);
     const paths = this.#index.get(hash);
 
-    if (paths === undefined) return [null, false];
+    // Hash does not exist.
+    if (paths === undefined)
+      return false;
 
-    for (let rel_path of paths) {
-      const [err, equal] = bytes_equal(path.join(this.#root, rel_path), fullname);
+    // Hash found, assert that file contents match.
+    for (let rel_path of paths)
+      if (bytes_equal(path.join(this.#root, rel_path), fullname))
+        return true;
 
-      if (err) return [err];
-      if (equal) return [null, true];
-    }
-
-    // Hash collision, hash exists but contents do not.
-    return [null, false];
+    // Hash collision, hash exists but contents do not match.
+    return false;
   }
 
   /**
    * Load and parse the cachefile.
    * Overwrites the index.
    *
-   * 1. Let $index be an empty map,
-   *        $hash, $file_count be undefined,
-   *        $files be an empty array.
-   * 2. Read until <#>, store in $hash, eat <#>.
-   * 3. Read until <;>, store in $file_count, eat <;>.
-   * 4. Read $file_count files.
-   *    1. Read until <:>, store in $file_size, eat <:>.
-   *    2. Read $file_size bytes, push into $files.
-   * 5. Set $hash in $index to $files.
+   * 1. Let <index> be an empty map.
+   * 2. Let <buffer> be the bytes from the cachefile.
+   * 3. Loop over the <buffer>.
+   *    3.a. Let <hash>, <file_count> be undefined.
+   *         Let <files> be an empty array.
+   *    3.b. Read <buffer> until <#>, store read bytes in <hash>.
+   *    3.c. Eat <#>.
+   *    3.d. Read <buffer> until <;>, store read bytes in <file_size>.
+   *    3.e. Eat <;>;
+   *    3.f. Loop <file_count> times.
+   *         3.f.a. Read <buffer> until <:>, store read bytes in <file_size>.
+   *         3.f.b. Eat <:>.
+   *         3.f.c. Read <file_size> from <buffer>, push read bytes into <files>.
+   *    3.g. Set <hash> in <index> to <files>.
    *
-   * @returns {string|null} Error message or null on success.
+   * @throws {Panic}
+   * @returns {void}
    */
   load_cachefile() {
+    // 1.
     let index = new Map();
 
+    // 2.
     let buffer;
-    try { buffer = fs.readFileSync(this.#cachefile) }
-    catch (err) { return err.code }
+    try {
+      buffer = fs.readFileSync(this.#cachefile);
+    } catch(err) {
+      panic(err)`Failed to load cachefile`;
+    }
 
+    // 3.
     for (let i = 0; i < buffer.length;) {
-      // 1.
+      // 3.a.
       let hash;
       let file_count;
       let files = Array();
 
-      { // 2.
+      { // 3.b.
         const start = i;
         while(buffer[i] !== "#".charCodeAt()) ++i;
         hash = buffer.slice(start, i).toString();
+        // 3.c.
         ++i;
       }
 
-      { // 3.
+      { // 3.d.
         const start = i;
         while(buffer[i] !== ";".charCodeAt()) ++i;
         file_count = parseInt(buffer.slice(start, i).toString(), 10);
+        // 3.e.
         ++i;
       }
 
-      { // 4.
+      { // 3.f.
         for (let n = 0; n < file_count; ++n) {
-          // 4.1
+          // 3.f.a.
           const start = i;
           while(buffer[i] !== ":".charCodeAt()) ++i;
           const file_size = parseInt(buffer.slice(start, i), 10);
+          // 3.f.b.
           ++i;
 
-          // 4.2
+          // 3.f.c.
           files.push(buffer.slice(i, i + file_size).toString());
           i += file_size;
         }
       }
 
-      // 5.
+      // 3.g.
       index.set(hash, files);
     }
 
@@ -219,13 +237,14 @@ export default class Lookup {
   }
 
   /**
-   * Saves the in-memory cache to disk.
+   * Saves the index to disk.
    *
    * Cachefile format:
-   * hash # files.count ; path.length : path ...
-   * e1cde3a#2;10:foobar.txt7:bar.jpg
+   * hash <#> files.count <;> path.length <:> path [path.length <:> path] ...
+   * e1cde3a#2;10:foobar.txt
    *
-   * @returns {string|null} Error message or null on success.
+   * @throws {Panic}
+   * @returns {void}
    */
   save_cachefile() {
     let data = String();
@@ -237,9 +256,10 @@ export default class Lookup {
         data += `${Buffer.byteLength(rel_path)}:${rel_path}`;
     }
 
-    try { fs.writeFileSync(this.#cachefile, data) }
-    catch (err) { return err.code }
-
-    return null;
+    try {
+      fs.writeFileSync(this.#cachefile, data);
+    } catch (err) {
+      panic(err)`Failed to save cachefile`;
+    }
   }
 }
