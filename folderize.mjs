@@ -15,14 +15,14 @@ const cli_options = {
   input: {
       expected_args: Infinity, is_required: true,
       assert: (dir) => assert(fs.statSync(dir).isDirectory()),
-      process: (dir) => path.resolve(dir)
+      map: (dir) => path.resolve(dir)
   },
 
   // The destination folder.  The current folder (./) is used as default.
   output: {
       default: "./",
       assert: (dir) => assert(fs.statSync(dir).isDirectory()),
-      process: (dir) => path.resolve(dir)
+      map: (dir) => path.resolve(dir)
   },
 
   // Structure that should be constructed in the output directory.
@@ -40,7 +40,7 @@ const cli_options = {
   exclude: {
       default: /^[]/,
       assert: (regex) => assert(new RegExp(regex)),
-      process: (regex) => new RegExp(regex)
+      map: (regex) => new RegExp(regex)
   },
 
   // Enables the creation/use of the cache file `folderize.cache'.

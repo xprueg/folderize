@@ -1,119 +1,154 @@
 import { panic } from "./panic.mjs";
 
+/**
+ * Represents a single command line option.
+ */
 class Option {
     static #UNDEF = Symbol();
     static #PROPS = Object.assign(Object.create(null), {
         WRITEABLE: {
-            alias: Option.#UNDEF,
-            assert: () => true,
+            short: Option.#UNDEF,
+            assert: Option.#UNDEF,
             default: Option.#UNDEF,
             expected_args: 1,
             is_flag: false,
             is_required: false,
-            process: (v) => v
-        },
-        PROTECTED: {
-            is_set: false,
-            args: Array()
+            map: (v) => v
         }
     });
 
-    #self = Object.create(null);
+    #is_set = false;
+    #args = Array();
 
+    /**
+     * Creates a new Option.
+     * @param {string} option - Name
+     * @param {object} props
+     * @throws {Panic}
+     * @returns {Option}
+     */
     constructor(option, props) {
         try {
-            Option.#validate(props);
-            Object.assign(this.#self,
-                Option.#PROPS.WRITEABLE, props,
-                Option.#PROPS.PROTECTED
-            );
+            this.#validate(props);
+            Object.assign(this, Option.#PROPS.WRITEABLE, props);
 
-            // Assign option as `name'.
-            this.#self.name = option;
+            // Set |expected_args| to zero for flags.
+            if (this.is_flag)
+                this.expected_args = 0;
 
-            // Set the expected arguments to 0 for flags.
-            if (this.#self.is_flag)
-                this.#self.expected_args = 0;
+            // Assign option as |long|.
+            this.long = option;
 
-            // Automatically set the `alias' to the first letter of the `name' if none is defined.
-            if (this.#self.alias === Option.#UNDEF)
-                this.#self.alias = this.#self.name[0];
+            // Automatically set |short| to the first char of |long| if none is defined.
+            if (this.short === Option.#UNDEF)
+                this.short = this.long[0];
 
-            // Prefix `name' and `alias' to match the command line inputs.
-            this.#self.name = `--${this.#self.name}`;
-            this.#self.alias = `-${this.#self.alias}`;
+            // Prefix |long| and |short| to match the command line inputs.
+            this.long = `--${this.long}`;
+            this.short = `-${this.short}`;
         } catch(err) {
-            panic(err)`Failed to create ${{ option }}`;
+            panic(err)`Could not create ${{ option }}`;
         }
     }
 
+    /**
+     * Static constructor.
+     * @see constructor
+     */
     static new(option, props) {
         return new Option(option, props);
     }
 
-    static #validate(props) {
-        const valid = Object.keys(this.#PROPS.WRITEABLE);
-
-        for (let propertyName of Object.keys(props))
-            if (!valid.includes(propertyName))
-                panic`Invalid ${{ propertyName }}`;
-    }
-
-    get name() {
-        return this.#self.name;
-    }
-
-    get alias() {
-        return this.#self.alias;
-    }
-
-    set is_set(bool) {
-        this.#self.is_set = bool;
-    }
-
-    get args() {
-        if (this.#self.is_flag)
-            return this.#self.is_set;
-
-        if (this.#self.is_set)
-            return this.#self.expected_args > 1
-                ? this.#self.args
-                : this.#self.args[0];
-        
-        if (this.#self.default !== Option.#UNDEF)
-            return this.#self.default;
-        
-        return null;
-    }
-
-    set args(value) {
-        this.#self.args = value;
-    }
-
-    assert() {
+    /**
+     * Validates the Options properties.
+     * @props {object} props - Option properties
+     * @todo Assert types.
+     * @throws {Panic}
+     * @returns {void}
+     */
+    #validate(props) {
         try {
-            // Assert that required options are set.
-            if (this.#self.is_required && this.#self.is_set === false)
-                panic`Required ${{ option: this.#self.name }} is not set`;
-
-            // Assert the expected argument count.
-            if (this.#self.default === Option.#UNDEF
-                && this.#self.args.length < this.#self.expected_args
-                && this.#self.expected_args === Infinity && this.#self.args.length === 0)
-                panic`
-                    Expected ${{ $expected: this.#self.expected_args }} argument(s),
-                    ${{ received: this.#self.args.length }}
-                `;
-
-            // Assert custom user function.
-            this.#self.args.forEach(this.#self.assert);
+            // Assert that all properties exist and are writable.
+            for (let prop of Object.keys(props))
+                if (!Object.keys(Option.#PROPS.WRITEABLE).includes(prop))
+                    panic`[u]${prop}[/u] is an [u]invalid property[/u]`;
         } catch(err) {
-            panic(err)`Assertion for ${{ option: this.#self.name }} failed`;
+            panic(err)`Could not validate properties`;
         }
     }
 
-    process() {
-        this.#self.args = this.#self.args.map(this.#self.process);
+    /**
+     * Returns the Objects value.
+     * The return value will vary depending on the properties set.
+     * @returns {*}
+     */
+    get args() {
+        this.#assert();
+
+        return this.is_flag
+            ? this.#is_set
+            : this.#is_set
+                ? this.expected_args > 1
+                    ? this.#args.map(this.map)
+                    : this.map(this.#args[0])
+                : this.default === Option.#UNDEF
+                    ? undefined
+                    : this.default;
+    }
+
+    /**
+     * Set if the Option is set.
+     * @param {boolean} [b=true]
+     * @returns {this}
+     */
+    is_set(b = true) {
+        this.#is_set = b;
+
+        return this;
+    }
+
+    /**
+     * Append a value to the Options arguments.
+     * @param {*} v
+     * @returns {void}
+     */
+    push(v) {
+        this.#args.push(v);
+    }
+
+    /**
+     * Asserts that all requirements are met.
+     * @throws {Panic}
+     * @returns {this}
+     */
+    #assert() {
+        try {
+            // Assert that required options are set.
+            if (this.is_required && this.#is_set === false)
+                panic`Required Option not set`;
+
+            // Assert the argument count.
+            if (this.#is_set) {
+                if (this.#args.length > this.expected_args)
+                    panic`Too many arguments,
+                        expected ${this.expected_args},
+                        received ${this.#args.length}
+                    `;
+
+                if (this.#args.length < this.excpected
+                    || this.expected_args === Infinity && this.#args.length === 0)
+                    panic`Too few arguments,
+                        expected ${this.expected_args},
+                        received ${this.#args.length}
+                    `;
+            }
+
+            // Assert a custom user function.
+            if (this.assert !== Option.#UNDEF)
+                this.#args.forEach(this.assert);
+        } catch(err) {
+            panic(err)`Could not assert option ${this.long}`;
+        }
     }
 }
 
@@ -123,167 +158,138 @@ export default class Argv {
     src_file;
     #argv;
 
-    // Parsed options.
-    #args = Object.create(null);
+    /** @type {object.<string, Option>} */
+    #opts = Object.create(null);
 
     constructor(argv) {
         try {
             if (!Array.isArray(argv))
-                panic`Param 'argv' must be of type array`;
+                panic`The "argv" argument must be of type array.`;
 
             if (argv.length < 2)
-                panic`Param 'argv' must contain at least two elements`;
+                panic`The "argv" argument must have a length of at least two`;
 
             this.node_exec = argv.shift();
             this.src_file = argv.shift();
             this.#argv = argv;
         } catch(err) {
-            panic(err)`Failed to create Argv`;
+            panic(err)`Argv failed to construct`
         }
     }
 
+    /**
+     * Static constructor.
+     * @see constructor
+     */
     static new(argv = process.argv) {
         return new Argv(argv);
     }
 
     /**
-     * Parses and returns the options.
-     * @param {object} options - Options to parse.
+     * Returns the |opts| argument with their properties
+     * replaced by the argument(s) from the command line.
+     *
+     * @param {object} opts - Options with their properties.
      * @throws {Panic}
      * @returns {object};
      */
-    parse(options = Object.create(null)) {
-        this.#init_options(options);
-        this.#split_single_char_options();
-        this.#extract_cli_values();
+    parse(opts = Object.create(null)) {
+        try {
+            // Create Options
+            for (let [option, props] of Object.entries(opts))
+                this.#opts[option] = Option.new(option, props);
 
-        for (let option of Object.values(this.#args)) {
-            option.assert();
-            option.process();
+            // Parse command line arguments
+            this.#ungroup_compound_options();
+            this.#parse_option();
+
+            // Return options with their values assigned.
+            return Object.entries(this.#opts).reduce(
+                (out, [k, opt]) => Object.assign(out, { [k]: opt.args }),
+                Object.create(null)
+            );
+        } catch(err) {
+            panic(err)`Argv failed to parse the command line arguments`;
         }
-
-        for (let [key, option] of Object.entries(this.#args))
-            this.#args[key] = option.args;
-
-        return this.#args;
     }
 
     /**
-     * Initialize user defined options.
-     * @param {object} options
+     * Returns the given Option if defined.
+     * @param {string} o - Long or short option including the dashes.
      * @throws {Panic}
+     * @returns {Option}
+     */
+    #get_option(o) {
+        for (let option of Object.values(this.#opts))
+            if (this.#is_long(o) && o === option.long ||
+                this.#is_short(o) && o === option.short)
+                return option;
+
+        panic`Unkown ${{ option: o }}`;
+    }
+
+    /**
+     * Tests whether the string is an option, long or short.
+     * @param {str} s
+     * @returns {boolean}
+     */
+    #is_option(s) {
+        return this.#is_long(s) || this.#is_short(s);
+    }
+
+    /**
+     * Tests whether the string is a long option.
+     * @param {string} s
+     * @returns {boolean}
+     */
+    #is_long(s) {
+        return /^--[^-]/.test(s);
+    }
+
+    /**
+     * Test whether the string is a short option.
+     * @param {string} s
+     * @returns {boolean}
+     */
+    #is_short(s) {
+        return /^-[^-]/.test(s);
+    }
+
+    /**
+     * Ungroup compound short options.
+     * -xyz → -x -y -z
+     *
      * @returns {void}
      */
-    #init_options(options) {
-        try {
-            for (let [option, props] of Object.entries(options))
-                this.#args[option] = Option.new(option, props);
-        } catch(err) {
-            panic(err)`Failed to initialize command line options`;
+    #ungroup_compound_options() {
+        for (let i = 0, t = this.#argv[i]; i < this.#argv.length; ++i, t = this.#argv[i])
+            if (this.#is_short(t))
+                try { this.#get_option(t) } catch {
+                    const split = t.substr(1).split(String()).map(t => `-${t}`);
+                    this.#argv.splice(i, 1, ...split);
+                }
+    }
+
+    #parse_option(pos = 0) {
+        for (let i = pos; i < this.#argv.length; ++i) {
+            const token = this.#argv[i];
+
+            if (!this.#is_option(token))
+                panic`Unexpected value [u]${token}[/u], expected an option`;
+
+            const option = this.#get_option(token).is_set();
+            return void this.#parse_arguments(option, i + 1);
         }
     }
 
-    #is_option(str) {
-        return this.#is_name(str) || this.#is_alias(str);
-    }
+    #parse_arguments(option, pos) {
+        for (let i = pos; i < this.#argv.length; ++i) {
+            const token = this.#argv[i];
 
-    #is_name(str) {
-        return /^--[^-]/.test(str);
-    }
+            if (this.#is_option(token))
+                return void this.#parse_option(i);
 
-    #is_alias(str) {
-        return /^-[^-]/.test(str);
-    }
-
-    /**
-     * Split single dash multiple character argv options into single character options.
-     * [-xyz] → [-x -y -z]
-     */
-    #split_single_char_options() {
-        for (let i = 0; i < this.#argv.length; ++i) {
-            const option = this.#argv[i];
-
-            // Split if token starts with a single dash and is not a known alias.
-            if (/^-[^-]/.test(option) && !this.#get_defined_option(option)) {
-                const split = option.substr(1).split(String()).map(t => `-${t}`);
-                this.#argv.splice(i, 1, ...split);
-            }
+            option.push(token);
         }
-    }
-
-    /**
-     * Groups argv tokens into groups of option and their argument(s).
-     * [-i ./ -o /foo -o /bar /baz -c] → [[-i ./][-o /foo /bar /baz][-c]]
-     * @returns {string[][]}
-     */
-    #group_cli_tokens() {
-        let groups = Array();
-
-        if (this.#argv.length === 0)
-            return groups;
-
-        for (let start = 0, end = 0; end < this.#argv.length + 1; ++end) {
-            const cli_token = this.#argv[end];
-            const is_option =
-                // Ignore first entry.
-                start !== end && this.#is_option(cli_token)
-                // Loop out of bounds to handle last entry.
-                || cli_token === undefined;
-
-            if (is_option) {
-                const command = this.#argv.slice(start, end); 
-                const exists = groups.filter(group => {
-                    if (group[0] === command[0])
-                        return group.push(...command.slice(1));
-
-                    return false;
-                });
-
-                if (exists.length === 0)
-                    groups.push(command);
-
-                start = end;
-            }
-        }
-
-        return groups;
-    }
-
-    /**
-     * Extracts the options and arguments from argv.
-     * @throws {Panic}
-     * @returns {void}
-     */
-    #extract_cli_values() {
-        try {
-            const grouped_cli_tokens = this.#group_cli_tokens();
-
-            for (let [option, ...args] of grouped_cli_tokens) {
-                const defined_option = this.#get_defined_option(option);
-
-                if (defined_option === false)
-                    panic`Unkown ${{ option }}`;
-
-                defined_option.is_set = true;
-                defined_option.args = args;
-            }
-        } catch(err) {
-            panic(err)`Failed to parse command line options`;
-        }
-    }
-
-    /**
-     * Returns an user defined <Option> if defined.
-     * @param {string} option - Option to return.
-     * @returns {object|false}
-     */
-    #get_defined_option(option) {
-        for (let arg of Object.values(this.#args)) {
-            if (this.#is_name(option) && option === arg.name ||
-                this.#is_alias(option) && option === arg.alias)
-                return arg;
-        }
-
-        return false;
     }
 }
