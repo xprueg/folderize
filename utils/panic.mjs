@@ -1,6 +1,6 @@
 import { EOL } from "os";
 
-class Panic extends Error {
+export default class Panic extends Error {
     constructor(strings, props, cause = undefined) {
         super(Panic.#message(strings, props));
 
