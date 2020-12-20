@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import progress from "./utils/progress.mjs";
-const { LOADER } = progress.constants;
-import { println } from "./utils/console.mjs";
+import Progress, { done, perm, symb } from "./utils/progress.mjs";
+import { println, printover } from "./utils/console.mjs";
 import { get_unique_filename, Read } from "./utils/fs.mjs";
 import { panic } from "./utils/panic.mjs";
 
@@ -31,11 +30,12 @@ export default class FileCopy {
   init() {
     const stats = Read.dir(this.src).exclude(this.exclude).count(Read.FILE | Read.DIR);
 
-    this.progress = progress.to(stats.file)
-      .loader(LOADER, "\x20\x20")
-      .msg("Copied %P% (%C/%T)")
-      .msg(", Skipped %SKP file(s)", tokens => tokens.hasOwnProperty("SKP"))
-      .msg(", done.", tokens => tokens.P === 100);
+    this.progress = Progress.to(stats.file).msg([
+      done("\x20".repeat(2)),
+      perm("Copied $progress% ($current/$total)"),
+      symb(", Skipped $skipped file(s)"),
+      done(", done.")
+    ]);
 
     println(`← Copying files from [u]${this.src}[/u].`);
     println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
@@ -79,7 +79,7 @@ export default class FileCopy {
    */
   copy_file(fullname) {
     if (this.dst_lookup.contains(fullname))
-      return void this.progress.update("SKP", +1).step();
+      return void this.progress.increase("skipped").step();
 
     const src_stat = fs.lstatSync(fullname);
     const dst_folder = this.get_dst_folder(src_stat.mtime);

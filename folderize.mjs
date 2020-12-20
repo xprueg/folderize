@@ -8,7 +8,7 @@ import Lookup from "./file_lookup.mjs";
 import file_copy from "./file_copy.mjs";
 import { println, eprintln } from "./utils/console.mjs";
 import { Read } from "./utils/fs.mjs";
-import Progress from "./utils/progress.mjs";
+import Progress, { done, perm } from "./utils/progress.mjs";
 
 const cli_options = {
   // The input folder(s).
@@ -50,11 +50,14 @@ const cli_options = {
 process.on("uncaughtException", (err) => {
   eprintln(`${err.toString().split(EOL).map(line => `! ${line}`).join(EOL)}`);
   println();
+  console.log(err);
+  println();
   process.exit(1);
 });
 
 println();
 
+const progress = Progress.new();
 const settings = Argv.new().parse(cli_options);
 const lookup = Lookup.new(settings.output, settings.exclude);
 
@@ -80,10 +83,12 @@ if (settings.cache && fs.existsSync(lookup.get_cachefile())) {
 } else {
   // (Re)build index
   const stats = Read.dir(settings.output).exclude(settings.exclude).count(Read.FILE | Read.DIR);
-  const progress = Progress.to(stats.file)
-    .loader(Progress.constants.LOADER, "\x20\x20")
-    .msg("Cached %P% (%C/%T)")
-    .msg(", done.", t => t.P === 100);
+
+  progress.resize(stats.file).msg([
+    done("\x20".repeat(2)),
+    perm("Cached $progress% ($current/$total)"),
+    done(", done.")
+  ]);
 
   println(`→ Creating in-memory cache for [u]${settings.output}[/u].`);
   println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
