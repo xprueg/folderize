@@ -5,10 +5,10 @@ import { EOL } from "os";
 
 import Argv from "./utils/argv.mjs";
 import Lookup from "./file_lookup.mjs";
-import file_copy from "./file_copy.mjs";
+import Copy from "./file_copy.mjs";
 import { println, eprintln } from "./utils/console.mjs";
 import { Read } from "./utils/fs.mjs";
-import Progress, { done, perm } from "./utils/progress.mjs";
+import Progress, { done, perm, symb } from "./utils/progress.mjs";
 
 const cli_options = {
   // The input folder(s).
@@ -98,13 +98,24 @@ if (settings.cache && fs.existsSync(lookup.get_cachefile())) {
 
 println();
 
-settings.input.forEach(src => {
-  new file_copy(
-    src, settings.output,
-    settings.locale, settings.exclude, lookup, settings.dirstruct
-  );
+const copy = Copy.new(lookup, settings)
+  .on("skip", (fullname) => { progress.increase("skipped").step() })
+  .on("file_copied", progress.step.bind(progress));
 
-  println();
+settings.input.forEach((dir) => {
+    const stats = Read.dir(dir).exclude(settings.exclude).count(Read.FILE | Read.DIR);
+    println(`← Copying files from [u]${dir}[/u].`);
+    println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
+
+    progress.resize(stats.file).msg([
+        done("\x20".repeat(2)),
+        perm("Copied $progress% ($current/$total)"),
+        symb(", Skipped $skipped file(s)"),
+        done(", done.")
+    ]);
+
+    copy.from(dir);
+    println();
 });
 
 if (settings.cache) {

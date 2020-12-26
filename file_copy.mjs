@@ -1,106 +1,133 @@
 import fs from "fs";
 import path from "path";
+import { EventEmitter } from "events";
 
-import Progress, { done, perm, symb } from "./utils/progress.mjs";
-import { println, printover } from "./utils/console.mjs";
-import { get_unique_filename, Read } from "./utils/fs.mjs";
+import { Read, get_unique_filename } from "./utils/fs.mjs";
 import { panic } from "./utils/panic.mjs";
 
-export default class FileCopy {
-  constructor(src, dst, locale, exclude, lookup, dirstruct) {
-    this.src = src;
-    this.dst = dst;
-    this.exclude = exclude;
-    this.dst_lookup = lookup;
-    this.dirstruct = dirstruct;
-    this.formatter = {
-      e: new Intl.DateTimeFormat(locale, { day: "numeric" }),
-      d: new Intl.DateTimeFormat(locale, { day: "2-digit" }),
-      m: new Intl.DateTimeFormat(locale, { month: "2-digit" }),
-      b: new Intl.DateTimeFormat(locale, { month: "short" }),
-      B: new Intl.DateTimeFormat(locale, { month: "long" }),
-      Y: new Intl.DateTimeFormat(locale, { year: "numeric" }),
-      y: new Intl.DateTimeFormat(locale, { year: "2-digit" })
+export default class Copy extends EventEmitter {
+  #lookup;
+  #out_dir;
+  #exclude;
+  #dirstruct;
+  #locale;
+
+  #formatter;
+
+  /// Creates a new `Copy` instance.
+  ///
+  /// [>] lookup: Lookup
+  /// [>] opts: Object{ output: string, exclude: RegExp, dirstruct: string, locale: string }
+  /// [<] Copy
+  constructor(lookup, opts) {
+    super();
+
+    this.#lookup = lookup;
+    this.#out_dir = opts.output;
+    this.#exclude = opts.exclude;
+    this.#dirstruct = opts.dirstruct;
+    this.#locale = opts.locale;
+
+    this.#formatter = {
+      e: new Intl.DateTimeFormat(this.#locale, { day: "numeric" }),
+      d: new Intl.DateTimeFormat(this.#locale, { day: "2-digit" }),
+      m: new Intl.DateTimeFormat(this.#locale, { month: "2-digit" }),
+      b: new Intl.DateTimeFormat(this.#locale, { month: "short" }),
+      B: new Intl.DateTimeFormat(this.#locale, { month: "long" }),
+      Y: new Intl.DateTimeFormat(this.#locale, { year: "numeric" }),
+      y: new Intl.DateTimeFormat(this.#locale, { year: "2-digit" })
     };
-
-    this.progress = null;
-    this.init();
   }
 
-  init() {
-    const stats = Read.dir(this.src).exclude(this.exclude).count(Read.FILE | Read.DIR);
-
-    this.progress = Progress.to(stats.file).msg([
-      done("\x20".repeat(2)),
-      perm("Copied $progress% ($current/$total)"),
-      symb(", Skipped $skipped file(s)"),
-      done(", done.")
-    ]);
-
-    println(`← Copying files from [u]${this.src}[/u].`);
-    println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
-
-    const copy_err = Read.dir(this.src).on_file((fullname) => {
-      const err = this.copy_file(fullname);
-    }).exclude(this.exclude).iter();
+  /// [§] Copy::constructor
+  static new(lookup, opts) {
+    return new Copy(lookup, opts);
   }
 
-  /**
-   * Returns the formatted path for the given mtime.
-   * Creates missing segments if they don't exist.
-   * @param {Date} mtime
-   * @returns {string}
-   */
-  get_dst_folder(mtime) {
-    let dst_folder = this.dst;
-    const segments = this.dirstruct.replace(/%(\w)/g, (_, match) => {
-      return this.formatter[match].format(mtime);
-    }).split("/");
-
-    segments.forEach(segment => {
-      const dirs = Read.dir(dst_folder).exclude(this.exclude).collect(Read.DIR);
-
-      for (let dir of dirs)
-        if (path.basename(dir).startsWith(segment))
-          return void ((dst_folder = dir));
-    
-      dst_folder = path.join(dst_folder, segment);
-      fs.mkdirSync(dst_folder);
-    });
-
-    return dst_folder;
+  /// Copies the files from "dir" to the destination folder specified on creation.
+  /// The created folder structure depends on the "self.#dirstruct" set.
+  /// 
+  /// [>] dir: string
+  /// [!] Panic
+  /// [<] void
+  from(dir) {
+    try {
+      Read.dir(dir)
+          .exclude(this.#exclude)
+          .on_file((fullname) => this.copy_file(fullname))
+          .iter();
+    } catch(err) {
+      panic(err)`Failed to copy [u]${dir}[/u]`;
+    }
   }
 
-  /**
-   * Copies the provided file from src to dst.
-   * @todo Handle all possible errors. (lstatSync, mkdirSync, …)
-   * @param {string} fullname - File to copy.
-   * @returns {?string} Error message or null on success. 
-   */
+  /// Copies the given file to the set output folder.
+  /// Two events can be emitted during this function, namely:
+  ///   · skip: A file is skipped because it is already indexed.
+  ///   · file_copied: A file is successfully copied. 
+  ///
+  /// [>] fullname: string
+  /// [!] Panic
+  /// [e] skip?(fullname: string)
+  /// [e] file_copied?(void)
+  /// [<] void
   copy_file(fullname) {
-    if (this.dst_lookup.contains(fullname))
-      return void this.progress.increase("skipped").step();
+    try {
+      if (this.#lookup.contains(fullname))
+        return void this.emit("skip", fullname);
 
-    const src_stat = fs.lstatSync(fullname);
-    const dst_folder = this.get_dst_folder(src_stat.mtime);
+      const stat = fs.lstatSync(fullname);
+      const folder_out = this.mkdir_formatted(stat.mtime);
+      let fullname_out = path.join(folder_out, path.basename(fullname));
 
-    let dst_fullname = path.join(dst_folder, path.basename(fullname));
-    let is_copied = false;
-    do {
-      try {
-        fs.copyFileSync(fullname, dst_fullname, fs.constants.COPYFILE_EXCL);
-        fs.utimesSync(dst_fullname, src_stat.atime, src_stat.mtime);
-        is_copied = true;
-      } catch(err) {
-        if (err.code === "EEXIST") {
-          dst_fullname = get_unique_filename(dst_fullname);
-        } else {
-          panic(err)`File ${fullname} could not be copied`;
+      for(;;) {
+        try {
+          fs.copyFileSync(fullname, fullname_out, fs.constants.COPYFILE_EXCL);
+          fs.utimesSync(fullname_out, stat.atime, stat.mtime);
+          break;
+        } catch (err) {
+          if (err.code === "EEXIST")
+            fullname_out = get_unique_filename(fullname_out);
+          else throw err;
         }
       }
-    } while (!is_copied);
 
-    this.dst_lookup.push(dst_fullname);
-    this.progress.step();
+      this.#lookup.push(fullname_out);
+      this.emit("file_copied");
+    } catch(err) {
+      panic(err)`Could not copy file [u]${fullname}[/u]`;
+    }
+  }
+
+  /// Returns a formatted directory path based on the given "date".
+  /// Recursively creates the path if it does not exist.
+  ///
+  /// [>] date: Date
+  /// [!] Panic
+  /// [<] string
+  mkdir_formatted(date) {
+    try {
+      let dir = this.#out_dir;
+      this.#dirstruct
+          .replace(/%(\w)/g, (_, opt) => this.#formatter[opt].format(date))
+          .split("/")
+          .forEach(segment => {
+            const folder = Read.dir(dir).exclude(this.#exclude).collect(Read.DIR);
+
+            // Search and return existing folder.
+            for (let f of folder) {
+              if (path.basename(f).startsWith(segment)) {
+                return void ((dir = f));
+              }
+            }
+
+            // Create non existing folder.
+            fs.mkdirSync((dir = path.join(dir, segment)));
+          });
+
+      return dir;
+    } catch(err) {
+      panic(err)`Could not create formatted directory`;
+    }
   }
 }
