@@ -115,11 +115,9 @@ export default class Copy extends EventEmitter {
             const folder = Read.dir(dir).exclude(this.#exclude).collect(Read.DIR);
 
             // Search and return existing folder.
-            for (let f of folder) {
-              if (path.basename(f).startsWith(segment)) {
+            for (let f of folder)
+              if (path.basename(f).normalize().startsWith(segment))
                 return void ((dir = f));
-              }
-            }
 
             // Create non existing folder.
             fs.mkdirSync((dir = path.join(dir, segment)));
