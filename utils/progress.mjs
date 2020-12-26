@@ -9,9 +9,9 @@ class ProgressMessage {
   /// the message will always be printed.
   ///
   /// [>] message: string
-  /// [?] should_print=undefined: Fn(Object{uint}, RegExp) -> bool
+  /// [?] should_print?=null: Fn(tokens: Object{uint}) -> bool
   /// [<] ProgressMessage
-  constructor(message, should_print) {
+  constructor(message, should_print = null) {
     this.#msg = message;
     this.#should_print = should_print;
   }
@@ -27,7 +27,7 @@ class ProgressMessage {
   /// [>] re: RegExp
   /// [<] string 
   fmt(tokens, re) {
-    if (this.#should_print === undefined || this.#should_print(tokens))
+    if (this.#should_print === null || this.#should_print(tokens))
       return this.#msg.replace(re, (_, t) => tokens[t]);
 
     return String();
@@ -79,7 +79,7 @@ export default class Progress {
       yield pattern[index % pattern.length] + "\x20";
   }(["⠻", "⠽", "⠾", "⠷", "⠯", "⠟"]);
 
-  /// Creates a new `Progress` instance with `to` steps.
+  /// Creates a new `Progress` instance with "to" steps.
   ///
   /// [>] to: uint
   /// [<] Progress
@@ -92,8 +92,8 @@ export default class Progress {
     return new Progress(to);
   }
 
-  /// Creates a new empty `Progress` instance.
-  /// It must be resized before doing anything else than attaching a listener to it.
+  /// Creates a new empty `Progress` instance, it must be resized
+  /// before doing anything else than attaching a listener to it.
   ///
   /// [<] Progress
   static new() {
@@ -141,10 +141,10 @@ export default class Progress {
     return this;
   }
 
-  /// Increases a custom `token` by `amount`;
+  /// Increases a custom token by given amount.
   ///
   /// [>] token: string
-  /// [?] amount=1: uint[1..]
+  /// [?] amount?=1: uint[1..]
   /// [<] self
   increase(token, amount = 1) {
     if (!this.#tokens.hasOwnProperty(token)) {
@@ -168,7 +168,7 @@ export default class Progress {
   }
 
   /// Updates the regex for matching the tokens.
-  /// This must be called everytime the keys on `self#tokens` change.
+  /// This must be called everytime the keys on "self#tokens" change.
   ///
   /// [<] void
   #compile_token_regex() {
@@ -188,7 +188,6 @@ export default class Progress {
   }
 
   /// Advances the progress by one step.
-  /// Emits a "msg" event if there is a message to print.
   ///
   /// [<] void
   step() {
