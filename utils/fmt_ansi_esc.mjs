@@ -1,7 +1,6 @@
-/**
- * A lookup table between tags and ansi escape codes.
- * @const {object}
- */
+/// A lookup table between tags and ansi escape codes.
+///
+/// <T> Object{string}
 const codes = {
     // Reset
     reset: "\x1B[0m",
@@ -34,11 +33,10 @@ const codes = {
     bwhite:   "\x1B[47m"
 };
 
-/**
- * A regular expression to match the tags from 'codes',
- * in the form of [tag]text[/tag].
- * @const {RegExp}
- */
+/// A regular expression to match the tags from "codes",
+/// in the form of [tag]text[/tag].
+///
+/// <T> RegExp
 const regex = new RegExp(
   "\\[" +       // Opening square bracket
     "(" +       // Capture group
@@ -49,11 +47,10 @@ const regex = new RegExp(
   "g"
 );
 
-/**
- * Replaces tags with the appropriate ansi escape sequence.
- * @param {string} [msg=""] - The message to be formatted.
- * @returns {string}
- */
+/// Replaces tags with the appropriate ansi escape sequence.
+///
+/// [>] msg?=String(): string
+/// [<] string
 export default function fmt_ansi_esc_codes(msg = String()) {
   let stack = [];
   return msg.replace(regex, (_, tag) => {
