@@ -99,8 +99,9 @@ export default class Copy extends EventEmitter {
     }
   }
 
-  /// Returns a formatted directory path based on the given "date".
-  /// Recursively creates the path if it does not exist.
+  /// Returns a formatted directory path based on the given "date"
+  /// and the "self.#dirstruct" set. Recursively creates the path
+  /// if it does not exist.
   ///
   /// [>] date: Date
   /// [!] Panic
@@ -108,6 +109,10 @@ export default class Copy extends EventEmitter {
   mkdir_formatted(date) {
     try {
       let dir = this.#out_dir;
+
+      if (this.#dirstruct === String())
+        return dir;
+
       this.#dirstruct
           .replace(/%(\w)/g, (_, opt) => this.#formatter[opt].format(date))
           .split("/")
