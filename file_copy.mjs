@@ -4,15 +4,13 @@ import { EventEmitter } from "events";
 
 import { Read, get_unique_filename } from "./utils/fs.mjs";
 import { panic } from "./utils/panic.mjs";
+import DateDir from "./utils/datedir.mjs";
 
 export default class Copy extends EventEmitter {
   #lookup;
   #out_dir;
   #exclude;
-  #dirstruct;
-  #locale;
-
-  #formatter;
+  #datedir;
 
   /// Creates a new `Copy` instance.
   ///
@@ -25,18 +23,7 @@ export default class Copy extends EventEmitter {
     this.#lookup = lookup;
     this.#out_dir = opts.output;
     this.#exclude = opts.exclude;
-    this.#dirstruct = opts.dirstruct;
-    this.#locale = opts.locale;
-
-    this.#formatter = {
-      e: new Intl.DateTimeFormat(this.#locale, { day: "numeric" }),
-      d: new Intl.DateTimeFormat(this.#locale, { day: "2-digit" }),
-      m: new Intl.DateTimeFormat(this.#locale, { month: "2-digit" }),
-      b: new Intl.DateTimeFormat(this.#locale, { month: "short" }),
-      B: new Intl.DateTimeFormat(this.#locale, { month: "long" }),
-      Y: new Intl.DateTimeFormat(this.#locale, { year: "numeric" }),
-      y: new Intl.DateTimeFormat(this.#locale, { year: "2-digit" })
-    };
+    this.#datedir = DateDir.new(opts.dirstruct, opts.locale);
   }
 
   /// [§] Copy::constructor
@@ -77,7 +64,7 @@ export default class Copy extends EventEmitter {
         return void this.emit("skip", fullname);
 
       const stat = fs.lstatSync(fullname);
-      const folder_out = this.mkdir_formatted(stat.mtime);
+      const folder_out = this.#datedir.mkdir(this.#out_dir, stat.mtime);
       let fullname_out = path.join(folder_out, path.basename(fullname));
 
       for(;;) {
@@ -96,41 +83,6 @@ export default class Copy extends EventEmitter {
       this.emit("file_copied");
     } catch(err) {
       panic(err)`Could not copy file [u]${fullname}[/u]`;
-    }
-  }
-
-  /// Returns a formatted directory path based on the given "date"
-  /// and the "self.#dirstruct" set. Recursively creates the path
-  /// if it does not exist.
-  ///
-  /// [>] date: Date
-  /// [!] Panic
-  /// [<] string
-  mkdir_formatted(date) {
-    try {
-      let dir = this.#out_dir;
-
-      if (this.#dirstruct === String())
-        return dir;
-
-      this.#dirstruct
-          .replace(/%(\w)/g, (_, opt) => this.#formatter[opt].format(date))
-          .split("/")
-          .forEach(segment => {
-            const folder = Read.dir(dir).exclude(this.#exclude).collect(Read.DIR);
-
-            // Search and return existing folder.
-            for (let f of folder)
-              if (path.basename(f).normalize().startsWith(segment))
-                return void ((dir = f));
-
-            // Create non existing folder.
-            fs.mkdirSync((dir = path.join(dir, segment)));
-          });
-
-      return dir;
-    } catch(err) {
-      panic(err)`Could not create formatted directory`;
     }
   }
 }
