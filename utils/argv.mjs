@@ -1,8 +1,16 @@
 import { panic } from "./panic.mjs";
 
-/**
- * Represents a single command line option.
- */
+/// <T> OptionProps :: Object{
+///     short[?, len = 1] :: string,
+///     assert[?] :: Fn(v: string) -> bool,
+///     default[?] :: *,
+///     expected_args[? = 1] :: uint|Infinity,
+///     is_flag[? = false] :: bool
+///     is_required[? = false] :: bool,
+///     map[? = Fn(v: string) -> v] :: Fn(v: string) -> *
+/// }
+
+/// Represents a single command line option.
 class Option {
     static #UNDEF = Symbol();
     static #PROPS = Object.assign(Object.create(null), {
@@ -20,13 +28,13 @@ class Option {
     #is_set = false;
     #args = Array();
 
-    /**
-     * Creates a new Option.
-     * @param {string} option - Name
-     * @param {object} props
-     * @throws {Panic}
-     * @returns {Option}
-     */
+    /// Creates a new Option.
+    ///
+    /// [>] option :: string
+    ///     The name of the option.
+    /// [>] props :: OptionProps
+    /// [!] Panic
+    /// [<] Option
     constructor(option, props) {
         try {
             this.#validate(props);
@@ -51,21 +59,17 @@ class Option {
         }
     }
 
-    /**
-     * Static constructor.
-     * @see constructor
-     */
+    /// [§] Option::constructor
     static new(option, props) {
         return new Option(option, props);
     }
 
-    /**
-     * Validates the Options properties.
-     * @props {object} props - Option properties
-     * @todo Assert types.
-     * @throws {Panic}
-     * @returns {void}
-     */
+    /// Validates the Options properties.
+    ///
+    /// {xprueg} Assert not only the keys but also the types of the values.
+    /// [>] props :: OptionProps
+    /// [!] Panic
+    /// [<] void
     #validate(props) {
         try {
             // Assert that all properties exist and are writable.
@@ -77,11 +81,10 @@ class Option {
         }
     }
 
-    /**
-     * Returns the Objects value.
-     * The return value will vary depending on the properties set.
-     * @returns {*}
-     */
+    /// Returns the Objects value.
+    /// The return value will vary depending on the properties set.
+    ///
+    /// [<] *
     get args() {
         this.#assert();
 
@@ -96,31 +99,28 @@ class Option {
                     : this.default;
     }
 
-    /**
-     * Set if the Option is set.
-     * @param {boolean} [b=true]
-     * @returns {this}
-     */
+    /// Set if the Option is set.
+    ///
+    /// [>] b[? = true] :: bool
+    /// [<] self
     is_set(b = true) {
         this.#is_set = b;
 
         return this;
     }
 
-    /**
-     * Append a value to the Options arguments.
-     * @param {*} v
-     * @returns {void}
-     */
+    /// Append a value to the Options arguments.
+    ///
+    /// [>] v :: string
+    /// [<] void
     push(v) {
         this.#args.push(v);
     }
 
-    /**
-     * Asserts that all requirements are met.
-     * @throws {Panic}
-     * @returns {this}
-     */
+    /// Asserts that all requirements are met.
+    ///
+    /// [!] Panic
+    /// [<] void
     #assert() {
         try {
             // Assert that required options are set.
@@ -152,13 +152,11 @@ class Option {
     }
 }
 
-/** Utility class for parsing command line arguments. */
+/// Utility class for parsing command line arguments.
 export default class Argv {
     node_exec;
     src_file;
     #argv;
-
-    /** @type {object.<string, Option>} */
     #opts = Object.create(null);
 
     constructor(argv) {
@@ -169,31 +167,27 @@ export default class Argv {
             if (argv.length < 2)
                 panic`The "argv" argument must have a length of at least two`;
 
-            this.node_exec = argv.shift();
-            this.src_file = argv.shift();
-            this.#argv = argv;
+            this.#argv = Array.from(argv);
+            this.node_exec = this.#argv.shift();
+            this.src_file = this.#argv.shift();
         } catch(err) {
             panic(err)`Argv failed to construct`
         }
     }
 
-    /**
-     * Static constructor.
-     * @see constructor
-     */
+    /// [§] Argv::constructor
     static new(argv = process.argv) {
         return new Argv(argv);
     }
 
-    /**
-     * Returns the |opts| argument with their properties
-     * replaced by the argument(s) from the command line.
-     *
-     * @param {object} opts - Options with their properties.
-     * @throws {Panic}
-     * @returns {object};
-     */
-    parse(opts = Object.create(null)) {
+    /// Returns the "opts" argument with their properties
+    /// replaced by the argument(s) from the command line.
+    ///
+    /// [>] opts[? = Object] :: Object{ OptionProps }
+    ///     Options with their properties.
+    /// [!] Panic
+    /// [<] Object{*}
+    parse(opts = Object()) {
         try {
             // Create Options
             for (let [option, props] of Object.entries(opts))
@@ -213,12 +207,12 @@ export default class Argv {
         }
     }
 
-    /**
-     * Returns the given Option if defined.
-     * @param {string} o - Long or short option including the dashes.
-     * @throws {Panic}
-     * @returns {Option}
-     */
+    /// Returns the given `Option` if defined.
+    ///
+    /// [>] o :: string
+    ///     Long or short option including the dashes.
+    /// [!] Panic
+    /// [<] Option
     #get_option(o) {
         for (let option of Object.values(this.#opts))
             if (this.#is_long(o) && o === option.long ||
@@ -228,39 +222,34 @@ export default class Argv {
         panic`Unkown ${{ option: o }}`;
     }
 
-    /**
-     * Tests whether the string is an option, long or short.
-     * @param {str} s
-     * @returns {boolean}
-     */
+    /// Tests whether the string is an option, long or short.
+    ///
+    /// [>] s :: string
+    /// [<] bool
     #is_option(s) {
         return this.#is_long(s) || this.#is_short(s);
     }
 
-    /**
-     * Tests whether the string is a long option.
-     * @param {string} s
-     * @returns {boolean}
-     */
+    /// Tests whether the string is a long option.
+    ///
+    /// [>] s :: string
+    /// [<] bool
     #is_long(s) {
         return /^--[^-]/.test(s);
     }
 
-    /**
-     * Test whether the string is a short option.
-     * @param {string} s
-     * @returns {boolean}
-     */
+    /// Tests whether the string is a short option.
+    ///
+    /// [>] s :: string
+    /// [<] bool
     #is_short(s) {
         return /^-[^-]/.test(s);
     }
 
-    /**
-     * Ungroup compound short options.
-     * -xyz → -x -y -z
-     *
-     * @returns {void}
-     */
+    /// Ungroup compound short options.
+    /// -xyz → -x -y -z
+    ///
+    /// [<] void
     #ungroup_compound_options() {
         for (let i = 0, t = this.#argv[i]; i < this.#argv.length; ++i, t = this.#argv[i])
             if (this.#is_short(t))
