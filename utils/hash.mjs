@@ -3,14 +3,15 @@ import { createHash } from "crypto";
 
 import { panic } from "./panic.mjs";
 
-/**
- * Returns the specified hash digest for a given file.
- * @param {string} path - Path to the file to hash. 
- * @param {string} [algorithm=sha1] - Algorithm to use.
- * @param {string} [encoding=hex] - Encoding of the returned hash.
- * @throws {Panic}
- * @returns {string} 
- */
+/// Returns a md5 hash digest for a given file.
+///
+/// [>] path :: string
+///     File to hash.
+/// [>] algorithm[? = "sha1"] :: string
+/// [>] encoding[? = "hex"] :: string
+///     Encoding of the returned hash.
+/// [!] Panic
+/// [<] string
 export function get_filehash(path, algorithm = "sha1", encoding = "hex") {
   try {
     const buffer = readFileSync(path);
