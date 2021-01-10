@@ -13,20 +13,22 @@ export default class Lookup {
   #exclude;
   #index = new Map();
 
-  constructor(root, exclude) {
+  /// Returns a new `Lookup` instance.
+  ///
+  /// [>] root :: string
+  ///     Path to the directory to cache.
+  /// [>] exclude[? = /^[]/] :: RegExp
+  ///     Files to exclude.
+  /// [<] Lookup
+  constructor(root, exclude = /^[]/) {
     this.#root = root;
     this.#cachefile = path.join(this.#root, Lookup.#CACHEFILENAME);
     this.#exclude = exclude;
   }
 
-  /**
-   * Returns a new Lookup instance.
-   * @param {string} root - Path to the directory to cache.
-   * @param {RegExp} [exclude=/^[]/] - Files to exclude.
-   * @returns {Lookup}
-   */
-  static new(root, exclude = /^[]/) {
-    return new Lookup(root, exclude);
+  /// [§] Lookup::constructor
+  static new(...args) {
+    return new Lookup(...args);
   }
 
   /**
