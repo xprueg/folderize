@@ -42,9 +42,6 @@ The folderize utility copies files from multiple sources into a single destinati
 
 ## Tests
 
-Test are written to be run with [mocha](https://mochajs.org).&nbsp;&nbsp;Test coverage is basically non-existent at the moment though and more tests need to be added in the future.
+There is currently an integration test that should be run with the same options, excluding input and output, like you would intend to run `folderize` itself.
 
-```sh
-npm install mocha
-./node_modules/mocha/bin/mocha
-```
+<pre><b>npx jasmine --</b> [<b>-c</b>] [<b>--locale</b> <ins>LOCALE</ins>] [<b>--exclude</b> <ins>REGEX</ins>]</pre>
