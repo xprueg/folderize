@@ -53,6 +53,7 @@ export default class Copy extends EventEmitter {
   ///   · skip: A file is skipped because it is already indexed.
   ///   · file_copied: A file is successfully copied. 
   ///
+  /// {*} Replace inverted exclude with match function if available.
   /// [>] fullname: string
   /// [!] Panic
   /// [e] skip?(fullname: string)
@@ -63,14 +64,34 @@ export default class Copy extends EventEmitter {
       if (this.#lookup.contains(fullname))
         return void this.emit("skip", fullname);
 
+      // Create/Find the destination folder
       const stat = fs.lstatSync(fullname);
-      const folder_out = this.#datedir.mkdir(this.#out_dir, stat.mtime);
-      let fullname_out = path.join(folder_out, path.basename(fullname));
+      const datedir_segments = this.#datedir.fmt(stat.mtime).split("/");
+      let folder_out = this.#out_dir;
+      datedir_segments.forEach(segment => {
+        // Exists, foldername not changed.
+        if (fs.existsSync(path.join(folder_out, segment)))
+          return ((folder_out = path.join(folder_out, segment)));
 
-      for(;;) {
+        // Exists, foldername changed.
+        for (let folder of Read.dir(folder_out).collect(Read.DIR, Read.FLAT)) {
+          for (let inode of Read.dir(folder).exclude(/^(?!.*\.folderize\.inode)/).collect(Read.FILE, Read.FLAT)) {
+            if (segment === fs.readFileSync(inode, "utf8"))
+              return ((folder_out = folder));
+          };
+        };
+
+        // Does not exist, create.
+        fs.mkdirSync((folder_out = path.join(folder_out, segment)));
+        fs.writeFileSync(path.join(folder_out, ".folderize.inode"), segment);
+      })
+
+      // Copy file.
+      for(let fullname_out = path.join(folder_out, path.basename(fullname));;) {
         try {
           fs.copyFileSync(fullname, fullname_out, fs.constants.COPYFILE_EXCL);
           fs.utimesSync(fullname_out, stat.atime, stat.mtime);
+          this.#lookup.push(fullname_out);
           break;
         } catch (err) {
           if (err.code === "EEXIST")
@@ -79,7 +100,6 @@ export default class Copy extends EventEmitter {
         }
       }
 
-      this.#lookup.push(fullname_out);
       this.emit("file_copied");
     } catch(err) {
       panic(err)`Could not copy file [u]${fullname}[/u]`;
