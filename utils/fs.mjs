@@ -5,6 +5,7 @@ import { panic } from "./panic.mjs";
 
 /**
  * Tests whether the file is an internal file.
+ * @todo Remove this function and use .exclude to exclude internal files because sometimes internal files are wanted.
  * @param {string} filename - Filename to test.
  * @returns {bool}
  */
@@ -12,12 +13,20 @@ function is_internal_file(filename) {
   return /^\.folderize\.(cache|settings)$/.test(filename);
 }
 
-/** Utility class for iterating over directories. */
+/// Utility class for iterating over directories.
+///
+/// {*} Create a "match" function accompanying the "exclude" function.
 export class Read {
   #typemasks = Object.create(null);
+
+  // Filetypes
   static FILE    = 1 << 0;
   static DIR     = 1 << 1;
   static SYMLINK = 1 << 2;
+
+  // Options
+  static FLAT = false;
+  static RECURSIVE = true;
 
   #root;
   #exclude = /^[]/;
@@ -74,10 +83,11 @@ export class Read {
   /**
    * Counts the provided types.
    * @param {number} flags - Types to count.
+   * @param {boolean} [recursive=true]
    * @throws {Panic}
    * @returns {object}
    */
-  count(flags) {
+  count(flags, recursive = Read.RECURSIVE) {
     let count = {};
 
     for (let [type, tmask] of Object.entries(this.#typemasks)) {
@@ -88,7 +98,7 @@ export class Read {
     }
 
     try {
-      this.iter();
+      this.iter(undefined, recursive);
     } catch(err) {
       panic(err)`Failed to count files`;
     }
@@ -99,11 +109,12 @@ export class Read {
   /**
    * Collects the provided types.
    * If a single type is provided an Array will be returned otherwise an Object.
-   * @param {number} flags - Types to collect. 
+   * @param {number} flags - Types to collect.
+   * @param {boolean} [recursive=true]
    * @throws {Panic}
    * @returns {(string[]|object)}
    */
-  collect(flags) {
+  collect(flags, recursive = Read.RECURSIVE) {
     let flag_count = flags.toString(2).split("").filter(bit => bit === "1").length;
     let collection = flag_count === 1 ? Array() : Object.create(null);
 
@@ -121,7 +132,7 @@ export class Read {
     }
 
     try {
-      this.iter();
+      this.iter(undefined, recursive);
     } catch(err) {
       panic(err)`Failed to collect files`;
     }
@@ -132,10 +143,11 @@ export class Read {
   /**
    * Iterate the provided directory recursively.
    * @param {string} [dir=this.#root] - Directory to iterate.
+   * @param {boolean} [recursive=true]
    * @throws {Error}
    * @returns {void}
    */
-  iter(dir = this.#root) {
+  iter(dir = this.#root, recursive = true) {
     let dirents = fs.readdirSync(dir, { withFileTypes: true });
 
     for (let dirent of dirents) {
@@ -148,7 +160,7 @@ export class Read {
       if (dirent.isDirectory()) {
         this.#callbacks.on_dir(fullname);
 
-        this.iter(fullname);
+        if (recursive) this.iter(fullname);
       } else if (dirent.isFile()) {
         this.#callbacks.on_file(fullname);
       }
