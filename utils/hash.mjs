@@ -7,12 +7,12 @@ import { panic } from "./panic.mjs";
 ///
 /// [>] path :: string
 ///     File to hash.
-/// [>] algorithm[? = "sha1"] :: string
+/// [>] algorithm[? = "md5"] :: string
 /// [>] encoding[? = "hex"] :: string
 ///     Encoding of the returned hash.
 /// [!] Panic
 /// [<] string
-export function get_filehash(path, algorithm = "sha1", encoding = "hex") {
+export function get_filehash(path, algorithm = "md5", encoding = "hex") {
   try {
     const buffer = readFileSync(path);
     const hash = createHash(algorithm);
