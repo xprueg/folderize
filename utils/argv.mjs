@@ -21,7 +21,17 @@ class Option {
             expected_args: 1,
             is_flag: false,
             is_required: false,
-            map: (v) => v
+            map: (v) => v,
+        },
+        ASSERT_TYPE: {
+            // Returns either true or the description of the expected type.
+            short: (v) => typeof v === "string" || "string",
+            assert: (v) => typeof v === "function" || "function",
+            default: (v) => true,
+            expected_args: (v) => v === Infinity || typeof v === "number" && parseInt(v) === v || "integer or Infinity",
+            is_flag: (v) => typeof v === "boolean" || "boolean",
+            is_required: (v) => typeof v === "boolean" || "boolean",
+            map: (v) => typeof v === "function" || "function",
         }
     });
 
@@ -55,7 +65,7 @@ class Option {
             this.long = `--${this.long}`;
             this.short = `-${this.short}`;
         } catch(err) {
-            panic(err)`Could not create ${{ option }}`;
+            panic(err)`Could not create option [u]${option}[/u]`;
         }
     }
 
@@ -66,16 +76,20 @@ class Option {
 
     /// Validates the Options properties.
     ///
-    /// {*} Assert not only the keys but also the types of the values.
     /// [>] props :: OptionProps
     /// [!] Panic
     /// [<] void
     #validate(props) {
         try {
             // Assert that all properties exist and are writable.
-            for (let prop of Object.keys(props))
+            for (let prop of Object.keys(props)) {
                 if (!Object.keys(Option.#PROPS.VALUES).includes(prop))
                     panic`[u]${prop}[/u] is an [u]invalid property[/u]`;
+            
+                const ret = Option.#PROPS.ASSERT_TYPE[prop](props[prop]);
+                if (ret !== true)
+                    panic`Expected [u]${prop}[/u] as ${ret}, received ${typeof props[prop]}`;
+            }
         } catch(err) {
             panic(err)`Could not validate properties`;
         }
