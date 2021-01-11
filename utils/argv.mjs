@@ -7,14 +7,14 @@ import { panic } from "./panic.mjs";
 ///     expected_args[? = 1] :: uint|Infinity,
 ///     is_flag[? = false] :: bool
 ///     is_required[? = false] :: bool,
-///     map[? = Fn(v: string) -> v] :: Fn(v: string) -> *
+///     map[? = Fn(v: string) -> string] :: Fn(v: string) -> *
 /// }
 
 /// Represents a single command line option.
 class Option {
     static #UNDEF = Symbol();
     static #PROPS = Object.assign(Object.create(null), {
-        WRITEABLE: {
+        VALUES: {
             short: Option.#UNDEF,
             assert: Option.#UNDEF,
             default: Option.#UNDEF,
@@ -28,7 +28,7 @@ class Option {
     #is_set = false;
     #args = Array();
 
-    /// Creates a new Option.
+    /// Creates an `Option` instance.
     ///
     /// [>] option :: string
     ///     The name of the option.
@@ -38,20 +38,20 @@ class Option {
     constructor(option, props) {
         try {
             this.#validate(props);
-            Object.assign(this, Option.#PROPS.WRITEABLE, props);
+            Object.assign(this, Option.#PROPS.VALUES, props);
 
-            // Set |expected_args| to zero for flags.
+            // Set self.expected_args to zero for flags.
             if (this.is_flag)
                 this.expected_args = 0;
 
-            // Assign option as |long|.
+            // Assign option as self.long.
             this.long = option;
 
-            // Automatically set |short| to the first char of |long| if none is defined.
+            // Automatically set self.short to the first char of self.long if none is defined.
             if (this.short === Option.#UNDEF)
                 this.short = this.long[0];
 
-            // Prefix |long| and |short| to match the command line inputs.
+            // Prefix self.long and self.short to match the command line inputs.
             this.long = `--${this.long}`;
             this.short = `-${this.short}`;
         } catch(err) {
@@ -60,13 +60,13 @@ class Option {
     }
 
     /// [§] Option::constructor
-    static new(option, props) {
-        return new Option(option, props);
+    static new(...args) {
+        return new Option(...args);
     }
 
     /// Validates the Options properties.
     ///
-    /// {xprueg} Assert not only the keys but also the types of the values.
+    /// {*} Assert not only the keys but also the types of the values.
     /// [>] props :: OptionProps
     /// [!] Panic
     /// [<] void
@@ -74,7 +74,7 @@ class Option {
         try {
             // Assert that all properties exist and are writable.
             for (let prop of Object.keys(props))
-                if (!Object.keys(Option.#PROPS.WRITEABLE).includes(prop))
+                if (!Object.keys(Option.#PROPS.VALUES).includes(prop))
                     panic`[u]${prop}[/u] is an [u]invalid property[/u]`;
         } catch(err) {
             panic(err)`Could not validate properties`;
@@ -99,7 +99,7 @@ class Option {
                     : this.default;
     }
 
-    /// Set if the Option is set.
+    /// Set if the `Option` is set.
     ///
     /// [>] b[? = true] :: bool
     /// [<] self
@@ -159,6 +159,11 @@ export default class Argv {
     #argv;
     #opts = Object.create(null);
 
+    /// Creates an `Argv` instance.
+    ///
+    /// [>] argv[len >= 2] :: Array<string>
+    /// [!] Panic
+    /// [<] Argv
     constructor(argv) {
         try {
             if (!Array.isArray(argv))
@@ -183,7 +188,7 @@ export default class Argv {
     /// Returns the "opts" argument with their properties
     /// replaced by the argument(s) from the command line.
     ///
-    /// [>] opts[? = Object] :: Object{ OptionProps }
+    /// [>] opts[? = Object] :: Object{OptionProps}
     ///     Options with their properties.
     /// [!] Panic
     /// [<] Object{*}
@@ -259,6 +264,13 @@ export default class Argv {
                 }
     }
 
+    /// Tries to parse a single option at the argument "pos",
+    /// then returns control to self.#parse_arguments.
+    ///
+    /// [>] pos[? = 0] :: uint
+    ///     This should not be set as it is used internally.
+    /// [!] Panic
+    /// [<] void
     #parse_option(pos = 0) {
         for (let i = pos; i < this.#argv.length; ++i) {
             const token = this.#argv[i];
@@ -266,11 +278,18 @@ export default class Argv {
             if (!this.#is_option(token))
                 panic`Unexpected value [u]${token}[/u], expected an option`;
 
-            const option = this.#get_option(token).is_set();
+            const option = this.#get_option(token).is_set(true);
             return void this.#parse_arguments(option, i + 1);
         }
     }
 
+    /// Tries to parse all arguments, starting from the passed argument "pos"
+    /// until an option is found, then calls self.#parse_option.
+    ///
+    /// [>] option :: Option
+    /// [>] pos :: uint
+    /// [!] Panic
+    /// [<] void
     #parse_arguments(option, pos) {
         for (let i = pos; i < this.#argv.length; ++i) {
             const token = this.#argv[i];
