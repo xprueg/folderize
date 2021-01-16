@@ -149,7 +149,7 @@ class Option {
                         received ${this.#args.length}
                     `;
 
-                if (this.#args.length < this.excpected
+                if (this.#args.length < this.expected_args && this.expected_args !== Infinity
                     || this.expected_args === Infinity && this.#args.length === 0)
                     panic`Too few arguments,
                         expected ${this.expected_args},
