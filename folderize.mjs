@@ -27,17 +27,11 @@ if (settings.cache && lookup.load_cachefile()) {
 
   // Update index
   const diff = lookup.update();
-  if (diff.total === 0) {
+  if ((diff.added.length + diff.removed.length) === 0) {
     println("\x20\x20Cache is up to date with the live folder.");
   } else {
-    const diff_indicator_length = Math.min(20, diff.total);
-    const plus = "+".repeat(Math.floor(diff_indicator_length / diff.total * diff.added.length));
-    const minus = "-".repeat(Math.floor(diff_indicator_length / diff.total * diff.removed.length));
-
-    println(
-      "\x20\x20Updated cache against the live folder." +
-      `\x20[green]${plus}[/green][red]${minus}[/red]`
-    );
+    println("\x20\x20Updated cache against the live folder.");
+    println(`\x20\x20${diff.added.length} insertions(+), ${diff.removed.length} deletions(-)`);
   }
 } else {
   // (Re)build index

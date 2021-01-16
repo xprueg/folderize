@@ -48,15 +48,14 @@ export default class Lookup {
     }
   }
 
-  /**
-    * Update index against live folder.
-    * @todo Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
-    * @throws {Panic}
-    * @returns {{added: string[], removed: string[], total: number}}
-    */
+  /// Update index against live folder.
+  ///
+  /// {*} Also remove files if their hash doesn't match anymore, i. e. the path hasn't changed but the contents were changed. Only compare hashes if mtime is different.
+  /// [!] Panic
+  /// [<] Object{ added: Array<string>, removed: Array<string> };
   update() {
     try {
-      let diff = { added: [], removed: [], total: 0 };
+      let diff = { added: [], removed: [] };
       
       const live_dir = Read.dir(this.#root).exclude(this.#exclude).collect(Read.FILE);
 
@@ -80,8 +79,6 @@ export default class Lookup {
         this.push(fullname);
         diff.added.push(fullname);
       }
-
-      diff.total = diff.added.length + diff.removed.length;
 
       return diff;
     } catch(err) {
