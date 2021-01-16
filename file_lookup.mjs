@@ -32,14 +32,6 @@ export default class Lookup {
   }
 
   /**
-   * Returns the path to the cachefile.
-   * @returns {string}
-   */
-  get_cachefile() {
-    return this.#cachefile;
-  }
-
-  /**
    * Generate the index from all files in root.
    * @param {function} [callback] - Will be called for every file.
    * @throws {Panic}
@@ -159,28 +151,26 @@ export default class Lookup {
     return false;
   }
 
-  /**
-   * Load and parse the cachefile.
-   * Overwrites the index.
-   *
-   * 1. Let <index> be an empty map.
-   * 2. Let <buffer> be the bytes from the cachefile.
-   * 3. Loop over the <buffer>.
-   *    3.a. Let <hash>, <file_count> be undefined.
-   *         Let <files> be an empty array.
-   *    3.b. Read <buffer> until <#>, store read bytes in <hash>.
-   *    3.c. Eat <#>.
-   *    3.d. Read <buffer> until <;>, store read bytes in <file_size>.
-   *    3.e. Eat <;>;
-   *    3.f. Loop <file_count> times.
-   *         3.f.a. Read <buffer> until <:>, store read bytes in <file_size>.
-   *         3.f.b. Eat <:>.
-   *         3.f.c. Read <file_size> from <buffer>, push read bytes into <files>.
-   *    3.g. Set <hash> in <index> to <files>.
-   *
-   * @throws {Panic}
-   * @returns {void}
-   */
+  /// Load and parse the cachefile.
+  /// Overwrites the index.
+  ///
+  /// 1. Let <index> be an empty map.
+  /// 2. Let <buffer> be the bytes from the cachefile.
+  /// 3. Loop over the <buffer>.
+  ///    1. Let <hash>, <file_count> be undefined.
+  ///       Let <files> be an empty array.
+  ///    2. Read <buffer> until <#>, store read bytes in <hash>.
+  ///    3. Eat <#>.
+  ///    4. Read <buffer> until <;>, store read bytes in <file_size>.
+  ///    5. Eat <;>;
+  ///    6. Loop <file_count> times.
+  ///       1. Read <buffer> until <:>, store read bytes in <file_size>.
+  ///       2. Eat <:>.
+  ///       3. Read <file_size> from <buffer>, push read bytes into <files>.
+  ///    7. Set <hash> in <index> to <files>.
+  ///
+  /// [!] Panic
+  /// [<] bool
   load_cachefile() {
     // 1.
     let index = new Map();
@@ -190,64 +180,66 @@ export default class Lookup {
     try {
       buffer = fs.readFileSync(this.#cachefile);
     } catch(err) {
+      if (err.code === "ENOENT")
+        return false;
+
       panic(err)`Failed to load cachefile`;
     }
 
     // 3.
     for (let i = 0; i < buffer.length;) {
-      // 3.a.
+      // 3.1.
       let hash;
       let file_count;
       let files = Array();
 
-      { // 3.b.
+      { // 3.2.
         const start = i;
         while(buffer[i] !== "#".charCodeAt()) ++i;
         hash = buffer.slice(start, i).toString();
-        // 3.c.
+        // 3.3.
         ++i;
       }
 
-      { // 3.d.
+      { // 3.4.
         const start = i;
         while(buffer[i] !== ";".charCodeAt()) ++i;
         file_count = parseInt(buffer.slice(start, i).toString(), 10);
-        // 3.e.
+        // 3.5.
         ++i;
       }
 
-      { // 3.f.
+      { // 3.6.
         for (let n = 0; n < file_count; ++n) {
-          // 3.f.a.
+          // 3.6.1.
           const start = i;
           while(buffer[i] !== ":".charCodeAt()) ++i;
           const file_size = parseInt(buffer.slice(start, i), 10);
-          // 3.f.b.
+          // 3.6.2.
           ++i;
 
-          // 3.f.c.
+          // 3.6.3.
           files.push(buffer.slice(i, i + file_size).toString());
           i += file_size;
         }
       }
 
-      // 3.g.
+      // 3.7.
       index.set(hash, files);
     }
 
     this.#index = index;
+    return true;
   }
 
-  /**
-   * Saves the index to disk.
-   *
-   * Cachefile format:
-   * hash <#> files.count <;> path.length <:> path [path.length <:> path] ...
-   * e1cde3a#2;10:foobar.txt
-   *
-   * @throws {Panic}
-   * @returns {void}
-   */
+  /// Saves the index to disk.
+  ///
+  /// Cachefile format:
+  /// hash <#> files.count <;> path.length <:> path [path.length <:> path] ...
+  /// e1cde3a#1;10:foobar.txt
+  ///
+  /// [!] Panic
+  /// [<] void
   save_cachefile() {
     let data = String();
 

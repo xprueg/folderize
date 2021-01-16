@@ -1,4 +1,3 @@
-import fs from "fs";
 import { EOL } from "os";
 
 import cli_defaults from "./cli_defaults.mjs";
@@ -23,9 +22,7 @@ const progress = Progress.new();
 const settings = Argv.new().parse(cli_defaults);
 const lookup = Lookup.new(settings.output, settings.exclude);
 
-if (settings.cache && fs.existsSync(lookup.get_cachefile())) {
-  // Load cachefile
-  lookup.load_cachefile();
+if (settings.cache && lookup.load_cachefile()) {
   println("← Restored cache from cachefile.");
 
   // Update index
