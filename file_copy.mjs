@@ -27,8 +27,8 @@ export default class Copy extends EventEmitter {
   }
 
   /// [§] Copy::constructor
-  static new(lookup, opts) {
-    return new Copy(lookup, opts);
+  static new(...args) {
+    return new Copy(...args);
   }
 
   /// Copies the files from "dir" to the destination folder specified on creation.
@@ -84,7 +84,7 @@ export default class Copy extends EventEmitter {
         // Does not exist, create.
         fs.mkdirSync((folder_out = path.join(folder_out, segment)));
         fs.writeFileSync(path.join(folder_out, ".folderize.inode"), segment);
-      })
+      });
 
       // Copy file.
       for(let fullname_out = path.join(folder_out, path.basename(fullname));;) {
