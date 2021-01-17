@@ -3,16 +3,6 @@ import path from "path";
 
 import { panic } from "./panic.mjs";
 
-/**
- * Tests whether the file is an internal file.
- * @todo Remove this function and use .exclude to exclude internal files because sometimes internal files are wanted.
- * @param {string} filename - Filename to test.
- * @returns {bool}
- */
-function is_internal_file(filename) {
-  return /^\.folderize\.(cache|settings)$/.test(filename);
-}
-
 /// Utility class for iterating over directories.
 ///
 /// {*} Create a "match" function accompanying the "exclude" function.
@@ -29,7 +19,7 @@ export class Read {
   static RECURSIVE = true;
 
   #root;
-  #exclude = /^[]/;
+  #exclude = Array(/^[]/);
   #callbacks = Object.create(null);
 
   constructor(root) {
@@ -50,13 +40,19 @@ export class Read {
     return new Read(root);
   }
 
-  /**
-   * Sets the exclude regex.
-   * @param {RegExp} regex - Files to exclude.
-   * @returns {this} 
-   */
+  /// Sets the exclude regex.
+  ///
+  /// [>] regex :: RegExp|Array<RegExp>
+  ///     Filenames to exclude.
+  /// [<] self
   exclude(regex) {
-    this.#exclude = regex;
+    if (Array.isArray(regex)) {
+      this.#exclude = regex;
+    } else {
+      this.#exclude.length = 0;
+      this.#exclude.push(regex);
+    }
+
     return this;
   }
 
@@ -140,19 +136,17 @@ export class Read {
     return collection;
   }
 
-  /**
-   * Iterate the provided directory recursively.
-   * @param {string} [dir=this.#root] - Directory to iterate.
-   * @param {boolean} [recursive=true]
-   * @throws {Error}
-   * @returns {void}
-   */
+  /// Iterate the provided directory recursively.
+  ///
+  /// [>] dir[? = self.#root] :: string
+  /// [>] recursive[? = true] :: bool
+  /// [!] Error
+  /// [<] void
   iter(dir = this.#root, recursive = true) {
     let dirents = fs.readdirSync(dir, { withFileTypes: true });
 
     for (let dirent of dirents) {
-      if (this.#exclude.test(dirent.name)
-          || is_internal_file(dirent.name))
+      if (this.#exclude.filter(re => re.test(dirent.name)).length > 0)
         continue;
 
       const fullname = path.join(dir, dirent.name);
