@@ -19,12 +19,12 @@ process.on("uncaughtException", (err) => {
 println();
 
 const progress = Progress.new();
-const settings = Argv.new().parse(cli_defaults);
-settings.exclude = [settings.exclude, /^\.folderize\.(cache|inode)$/];
+const args = Argv.new().parse(cli_defaults);
+args.exclude = [args.exclude, /^\.folderize\.(cache|inode)$/];
 
-const lookup = Lookup.new(settings.output, settings.exclude);
+const lookup = Lookup.new(args.output, args.exclude);
 
-if (settings.cache && lookup.load_cachefile()) {
+if (args.cache && lookup.load_cachefile()) {
   println("← Restored cache from cachefile.");
 
   const diff = lookup.update();
@@ -35,11 +35,11 @@ if (settings.cache && lookup.load_cachefile()) {
     println(`\x20\x20${diff.added.length} insertions(+), ${diff.removed.length} deletions(-).`);
   }
 } else {
-  const stats = Read.dir(settings.output)
-                    .exclude(settings.exclude)
+  const stats = Read.dir(args.output)
+                    .exclude(args.exclude)
                     .count(Read.FILE | Read.DIR);
 
-  println(`→ Creating in-memory cache for [u]${settings.output}[/u].`);
+  println(`→ Creating in-memory cache for [u]${args.output}[/u].`);
   println(`\x20\x20Found ${stats.file} file(s) in ${stats.dir} directories.`);
 
   progress.resize(stats.file).msg([
@@ -53,13 +53,13 @@ if (settings.cache && lookup.load_cachefile()) {
 
 println();
 
-const copy = Copy.new(lookup, settings)
+const copy = Copy.new(lookup, args)
   .on("skip", (fullname) => { progress.increase("skipped").step() })
   .on("file_copied", progress.step.bind(progress));
 
-settings.input.forEach((dir) => {
+args.input.forEach((dir) => {
     const stats = Read.dir(dir)
-                      .exclude(settings.exclude)
+                      .exclude(args.exclude)
                       .count(Read.FILE | Read.DIR);
 
     println(`← Copying files from [u]${dir}[/u].`);
@@ -76,7 +76,7 @@ settings.input.forEach((dir) => {
     println();
 });
 
-if (settings.cache) {
+if (args.cache) {
   lookup.save_cachefile();
   println(`→ Saved cachefile.`);
   println();
